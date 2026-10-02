@@ -1,0 +1,71 @@
+# Ryu string-to-binary64 parser: known answers, from upstream's own suite.
+#
+# Provenance
+#   Every row is a case upstream states.  The `ok` rows are the literal
+#   arguments of `EXPECT_S2D(expected, "text")` in ryu/ryu/tests/s2d_test.cc
+#   at the pinned upstream revision 4c0618b0e44f7ef027ebae05d2cc7812048f7c8f.
+#   The rejected rows are the literal arguments and literal statuses of
+#   `EXPECT_EQ(STATUS, s2d("text", &value))` in the same file's BadInput case,
+#   where upstream declares the value variable uninitialised and asserts only
+#   the status.
+#
+# Line format
+#   <status> TAB <text> TAB <value-spec>
+#
+#   status is one of
+#     ok              upstream's SUCCESS
+#     input_too_short upstream's INPUT_TOO_SHORT
+#     input_too_long  upstream's INPUT_TOO_LONG
+#     malformed_input upstream's MALFORMED_INPUT
+#
+#   value-spec is `-` for a rejected row (upstream leaves the output variable
+#   untouched there) and otherwise the same encoding the other fixtures use:
+#   `zero`, `negzero`, `inf`, or `lit <decimal literal>` read back as a
+#   binary64.
+#
+#   `text` is the parser's whole input, not a NUL-terminated C string, so it
+#   can hold the empty string on a row of its own.
+#
+#   Blank lines and lines beginning with `#` are ignored.
+#
+# `s2d_test.cc` states `1..1` twice in its BadInput case.  The repeat is
+# dropped here so every row says something no other row says.
+ok	0	zero
+ok	-0	negzero
+ok	1	lit 1.0
+ok	2	lit 2.0
+ok	123456789	lit 123456789.0
+ok	123.456	lit 123.456
+ok	123456e-3	lit 123.456
+ok	1234.56e-1	lit 123.456
+ok	1.453	lit 1.453
+ok	1.453e+3	lit 1453.0
+ok	.0	zero
+ok	1e0	lit 1.0
+ok	1E0	lit 1.0
+ok	000001.000000	lit 1.0
+ok	0.2316419	lit 0.2316419
+ok	1.7976931348623157e308	lit 1.7976931348623157e308
+ok	5E-324	lit 5E-324
+ok	0.99999999999999999	lit 1.0
+ok	1.7976931348623159e308	inf
+ok	2.4e-324	zero
+ok	1e-324	zero
+ok	9.99999e-325	zero
+ok	2.4703282292062327e-324	zero
+ok	2.4703282292062328e-324	lit 5e-324
+ok	2e308	inf
+ok	1e309	inf
+ok	4.9406564584124654e-324	lit 5e-324
+ok	1.2999999999999999E+154	lit 1.2999999999999999E+154
+ok	2.2250738585072012e-308	lit 2.2250738585072012e-308
+ok	2.2250738585072013e-308	lit 2.2250738585072013e-308
+ok	2.2250738585072014e-308	lit 2.2250738585072014e-308
+malformed_input	x	-
+malformed_input	1..1	-
+malformed_input	..	-
+malformed_input	1ee1	-
+malformed_input	1e.1	-
+input_too_short		-
+input_too_long	123456789012345678	-
+input_too_long	1e12345	-

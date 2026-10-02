@@ -1,0 +1,155 @@
+# UPSTREAM.sha256 - reproducible fingerprint for ulfjack/ryu
+# at commit 4c0618b0e44f7ef027ebae05d2cc7812048f7c8f.
+#
+# 38 records, one `<hex>  <path>` line each, in `sha256sum` format, grouped
+# by what each path is for. Check them from the repository root with:
+#
+#     sha256sum -c UPSTREAM.sha256
+#
+# Every path named here is shipped in `build.zig.zon` `.paths`, so the same
+# command also works in an unpacked package fetched by a dependent.
+#
+# How the original digests were produced, 2026-10-01: each file was read as raw bytes
+# and hashed with SHA-256 through Bun (`Bun.file(path).arrayBuffer()` and
+# `new Bun.CryptoHasher("sha256")`). No shell hashing or git command produced
+# those original lines. The 38 paths now total 2689946 bytes.
+# The previous 2689837-byte total and all 38 digests were re-hashed on 2026-10-02 and
+# matched unchanged; the 2688626-byte figure this header carried until then was
+# stale.
+# The later translate.h include-citation correction adds 50 bytes and changes
+# only Group F's digest. The unchanged comparison above predates that edit.
+# The prominent change notice on the existing ryu/ryu.h:24 adds 59 bytes;
+# Group B's digest was re-derived with sha256sum on 2026-10-02. No line shifted.
+#
+# What this record is: a hash of THIS WORKING TREE.
+# What it is not: a Git object id, a signature, or a re-derivation from the
+# pinned commit. That the working tree differs from commit
+# 4c0618b0e44f7ef027ebae05d2cc7812048f7c8f in exactly the two paths this file
+# names, `.gitignore` and `ryu/ryu.h`, is established elsewhere, by the
+# pinned-commit diff in `.github/workflows/verify.yml` and by the archive
+# receipt in `UPSTREAM.md`. The two are complementary: this record fails if
+# any hashed byte moves here, whatever a commit says; the diff fails if any
+# other upstream-tracked path differs from the commit, whatever this record
+# says.
+#
+# One upstream-tracked file in this record is edited, and the record discloses
+# it rather than claiming a pristine tree. `ryu/ryu.h:24` reads
+# `#include <stdint.h>` here and `#include <inttypes.h>` at commit
+# 4c0618b0e44f7ef027ebae05d2cc7812048f7c8f.
+# That include carries one name into the header, `uint32_t`, used in the six
+# `precision` parameters at `ryu/ryu.h:34-40`, and no `PRI*` or `SCN*` macro;
+# `uint32_t` is declared by `<stdint.h>` (C99 7.18.1), which is the header
+# `<inttypes.h>` includes to reach the same type. The reason is portability,
+# not preference: NetBSD's `<inttypes.h>` closes its declarations with
+# `__END_DECLS`, whose replacement list starts with a `_Pragma` the pinned
+# translator reads as ordinary tokens. Nine cells of the platform matrix are
+# NetBSD cells, and all nine reach this header through it.
+#
+# The deviation is exactly that line. Upstream's bytes for this path are 1360
+# bytes hashing to b7feab0ba1df5e9ef3d602f386592ad152491405e49b408fb21c0e0e9e6bfb16;
+# replacing that one include with `<stdint.h>` and its inline change notice
+# reproduces this tree's 1417 bytes exactly; no other native path differs.
+# No declaration, type, signature, constant or algorithm changes.
+# Three of the five compiled translation units include the header this record
+# measures (`d2s.c`, `f2s.c`, `d2fixed.c`); the two parsers include
+# `<stdint.h>` of their own and `ryu/ryu_parse.h`, and `generic_128.c`, which
+# only `-Dgeneric128` compiles, includes `ryu/ryu_generic_128.h`. Neither of
+# those headers is patched. Group B therefore carries the patched digest, with
+# upstream's kept beside it. `translate.h` states the same deviation in prose,
+# and `.github/workflows/verify.yml` enforces it: it hashes upstream's blob at
+# the pinned commit and this tree's file, puts the one include back, and
+# requires upstream's digest. A `git diff --exit-code` against the pinned
+# commit over `ryu/` reports this one path, by design.
+#
+# Excluded, deliberately, with the reason in each case:
+#   * `.gitignore` - an upstream-tracked file this fork edits, additively, so
+#     its bytes are the fork's rather than upstream's. It is the only edited
+#     path left out of the records; the other edited path, `ryu/ryu.h`, is
+#     hashed at its patched digest, as the section above says.
+#   * `third_party/` - separate upstream corpora (gtest, junit, mersenne,
+#     jaffer, double-conversion, mersenne_java) that carry their own licences
+#     and that nothing in this package compiles or links. See `NOTICE.md`.
+#   * the remaining upstream-tracked paths (`src/`, `scripts/`, `lean/`,
+#     `ryu/benchmark/`, `ryu/Makefile`, `ryu/BUILD`, `CMakeLists.txt`,
+#     `MODULE.bazel`, the benchmark scripts, `.bazelrc`, `.bazelversion`,
+#     `.classpath`, `lakefile.toml`, `lake-manifest.json`,
+#     `lean-toolchain`, `.github/workflows/presubmit.yml`) - carried whole,
+#     compiled by nothing here, and covered by the pinned-commit diff.
+#   * everything this fork wrote, except `translate.h`: `build.zig`,
+#     `build.zig.zon`, `zig/root.zig`, `tests.zig`, `smoke.zig`, `consumer/`,
+#     `.github/workflows/verify.yml` and the fork's own documentation. Those
+#     are expected to change.
+#   * `zig-out/` and `.zig-cache/` - build output, absent from `.paths` and
+#     ignored by `.gitignore`.
+#   * this record itself.
+
+# --- A. The native core this package compiles --------------------------------
+# build.zig `core_sources`, plus the extra unit `-Dgeneric128` adds. Five are
+# compiled on every target of the six-target check; `generic_128.c` is only
+# compiled when that option is passed and has never been compiled in this
+# workspace.
+78c56baef739197e1e3e395c0304c3f15ed5afbe4e01b3473a92c3cbc3eeb81b  ryu/d2fixed.c
+d24323c7eb77d63f1e52c415212b50060b776f0883525d907d04954fcd48cf64  ryu/d2s.c
+0a98f4fce6be4c599f9602b8059e95bae6bffbb622dcde52deb4a8f8b51f5e0e  ryu/f2s.c
+b176167660e90d13a6238f56544e3d67fe3f89c8da6740dd45f8b88923f62fd9  ryu/generic_128.c
+9485e78f329ec1cf931b737333ef7bd85195864dfb9dd096413f0d336a7a46d3  ryu/s2d.c
+9ce535a5ec65d72167571de60795b5fc86f5ff50bf6407cf2fed658b373fd52c  ryu/s2f.c
+
+# --- B. Every header in ryu/ -----------------------------------------------
+# Two of them are installed (`ryu.h`, `ryu_parse.h`), one more when
+# `-Dgeneric128` is passed (`ryu_generic_128.h`); the rest are included by the
+# core, including the checked-in power-of-five and bit tables the build never
+# regenerates.
+0bbd71d26da6193e678d0776cf418f43f287c73d6fd6725353df0aadf70f2a19  ryu/common.h
+c505f1f21f5e4658196afd23df50f1ec4d048144095f73d92454705240a14547  ryu/d2fixed_full_table.h
+2618f6e5fae6c4443899b184efe3d08295dd267dc9f1a994c983c7caca59ebe6  ryu/d2s_full_table.h
+1d05702f2edacce428223d4b43dd3095c1bd1f3ad30128ce1761d84356dddc7d  ryu/d2s_intrinsics.h
+54fec51f1c5eed786a8ce6de881b81582dd71f0812dcd4324b37396617bb0fa9  ryu/d2s_small_table.h
+8b782573abc0b8554d74163ae6c02f0beb5c30d1e63eaebdb0ddf2c98d817e01  ryu/digit_table.h
+ec08e3a1993d29ed5cabd54c97f2bd7dcf9e5f7b61cf854502613d6634855fb3  ryu/f2s_full_table.h
+662d2903454b8f6c44f18d0567e6d3f8f73f360d0d50a46e91fd245fdfa8fdc0  ryu/f2s_intrinsics.h
+f29cc156f7c09d6e056061850bf392abbacc0fa1d490c52e4bcf35757df90a19  ryu/generic_128.h
+83ed2a4cd2e42cdd351383b5c937e320e47d8e0ea214964a7b8568f974754dae  ryu/ryu.h
+# Patched, by the one disclosed line named in this file's header. Upstream's
+# own bytes for this path: b7feab0ba1df5e9ef3d602f386592ad152491405e49b408fb21c0e0e9e6bfb16
+c1ea7f47166eb4d081a164cf475b4a2383a6af78a309e6fd3605968e78969879  ryu/ryu_generic_128.h
+da8ad9764b2701627cb75926b9d14b540fdfd7be693d671da9594eb16dabd27a  ryu/ryu_parse.h
+
+# --- C. Upstream's own test sources: the independent oracles --------------
+# Every expected string in `testdata/` is copied out of these files. They are
+# not compiled by this package; they are hashed because the fixtures are
+# transcriptions of them and nothing else ties the two together.
+9131dfc4c30bff1211cdf32843801f9db73b0abfe7bf31d49d8535dfe417e873  ryu/tests/common_test.cc
+a39eebf9f11087785556e917259e42dd2bc8626518dc8145c20b2e7938df7b9d  ryu/tests/d2fixed_test.cc
+91cf3a27c38dfc0408b24710519eb13cf65f6917ef1b5bff008060a05635b532  ryu/tests/d2s_intrinsics_test.cc
+6056e836715aff70a3fd8c3e37a7c2adf384f668d1b0fc7c82c28aab2419b800  ryu/tests/d2s_table_test.cc
+bf5ac2ae6c54c172eee0c7e65b98f2ead6a2649d7614bbd867965e499037445b  ryu/tests/d2s_test.cc
+4902239b121a39eb67c04b2c2d294aa4e75afa370f5ba8524ae863ec9145377c  ryu/tests/f2s_test.cc
+4517776eb885d9c295104cb90d007063e3b94709b3b767e238cccebe17c4fa9b  ryu/tests/generic_128_test.cc
+ba239c732c8f6596770aa942f5bd17fab88d88060ad5379f5de04d8c63a84935  ryu/tests/s2d_test.cc
+176163ad587b643c224c79f82a0fbff3b5e0c82ad16352172cc83418bd5229ec  ryu/tests/s2f_test.cc
+
+# --- D. The licence terms, and the two files that state them ---------------
+# `README.md` is where upstream states the grant; `CONTRIBUTORS` is where it
+# names its authors. Hashing them keeps the basis of the licence itself
+# tamper-evident, not just the texts.
+5d1ce5f1f2515dc4587dfb681b0390bca432edd19b13fec47d8d1a59cc7e9bee  CONTRIBUTORS
+c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4  LICENSE-Apache2
+c9bff75738922193e67fa726fa225535870d2aa1059f91452c411736284ad566  LICENSE-Boost
+20572708ea26d19fd596f1c4a44097dbcb491cdf0517024d68bbb5d622d0ac93  README.md
+
+# --- E. This fork's fixtures ------------------------------------------------
+# Transcribed, not generated: every row is a literal upstream asserts. Their
+# hashes pin the transcription, not upstream's bytes - upstream ships no such
+# files. 527 data rows in total: 132 + 60 + 134 + 134 + 39 + 28.
+65c5385c6a112c58d905e89b88ea1002354f60dbb61e541b5d0c5451541593d0  testdata/d2exp.txt
+79ce4adedaece5802edeab9757d89aec482f94b17d04bdf3ef95715767e76c79  testdata/d2fixed.txt
+d82b5dbbb45bda48aff2a399b4520029822e47405073bb2608be9720530ba2dd  testdata/d2s_shortest.txt
+d9c80d4d22d60c6f70e3fb50dd9b66acc18ae378489225ab46899a6d42f6a29f  testdata/f2s_shortest.txt
+5185b5be7bd350d5cb1efdc6a464845b844f2ba9740f765c65c08e989bc0a21d  testdata/s2d_parse.txt
+cda439be4a3a1905cd95399ef82dcf5350ccca23599c80463dcee37d215b7cbc  testdata/s2f_parse.txt
+
+# --- F. Fork-authored header that is part of the shipped C surface ---------
+# Translated by `addTranslateC` for every target the package is built for,
+# and installed as `<prefix>/include/translate.h`.
+049973a764b4359234bb05087dbea5504deabdb10bd36f27b06f088da22c3ea3  translate.h

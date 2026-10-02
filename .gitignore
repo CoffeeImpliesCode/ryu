@@ -6,3 +6,8 @@ MODULE.bazel.lock
 .vscode/
 ryu/*.[oa]
 ryu/tests/*.test
+# Fork additions. Every entry above is upstream's and stays as upstream wrote
+# it; these two keep this fork's Zig caches and install tree out of commits
+# and out of the package's `.paths` in build.zig.zon.
+.zig-cache/
+zig-out/

@@ -21,7 +21,7 @@
 extern "C" {
 #endif
 
-#include <inttypes.h>
+#include <stdint.h> // Foundation fork: remove unused inttypes.h (2026-10-02).
 
 int d2s_buffered_n(double f, char* result);
 void d2s_buffered(double f, char* result);

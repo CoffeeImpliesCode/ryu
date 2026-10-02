@@ -1,0 +1,57 @@
+# Ryu string-to-binary32 parser: known answers, from upstream's own suite.
+#
+# Provenance
+#   Every `ok` row is a case upstream states: the literal arguments of
+#   `EXPECT_S2F(expected, "text")` in ryu/ryu/tests/s2f_test.cc at the pinned
+#   upstream revision 4c0618b0e44f7ef027ebae05d2cc7812048f7c8f.  Upstream has
+#   no rejected-input test for the 32-bit parser, so the rejected rows below
+#   are read out of ryu/s2f.c's own status returns instead of out of a test:
+#   `INPUT_TOO_SHORT` for empty input at ryu/s2f.c:66-68, `MALFORMED_INPUT`
+#   for a second point, a non-digit, or a trailing byte at ryu/s2f.c:85-87,
+#   ryu/s2f.c:111-113 and ryu/s2f.c:124-126, and `INPUT_TOO_LONG` past 9
+#   nonzero mantissa digits or past 4 exponent digits at ryu/s2f.c:94-96 and
+#   ryu/s2f.c:114-117.  The texts are the same ones upstream uses for the
+#   64-bit parser.
+#
+# Line format
+#   <status> TAB <text> TAB <value-spec>
+#
+#   status is one of
+#     ok              upstream's SUCCESS
+#     input_too_short upstream's INPUT_TOO_SHORT
+#     input_too_long  upstream's INPUT_TOO_LONG
+#     malformed_input upstream's MALFORMED_INPUT
+#
+#   value-spec is `-` for a rejected row and otherwise `zero`, `negzero`,
+#   `inf`, or `lit <decimal literal>` read back as a binary32.
+#
+#   Upstream repeats `1..1` in its 64-bit BadInput case; the repeat is
+#   dropped here too, for the same reason.
+ok	0	zero
+ok	-0	negzero
+ok	1	lit 1.0
+ok	-1	lit -1.0
+ok	123456789	lit 123456792.0
+ok	299792458	lit 299792448.0
+ok	1e-45	lit 1e-45
+ok	1.1754944e-38	lit 1.1754944e-38
+ok	3.4028235e+38	lit 3.4028235e+38
+ok	0.999999999	lit 1.0
+ok	3.4028236e+38	inf
+ok	1.17549430e-38	lit 1.1754944e-38
+ok	1.17549431e-38	lit 1.1754944e-38
+ok	1.17549432e-38	lit 1.1754944e-38
+ok	1.17549433e-38	lit 1.1754944e-38
+ok	1.17549434e-38	lit 1.1754944e-38
+ok	1.17549435e-38	lit 1.1754944e-38
+ok	26843549.5	lit 26843550.0
+ok	50000002.5	lit 50000004.0
+ok	99999989.5	lit 99999992.0
+malformed_input	x	-
+malformed_input	1..1	-
+malformed_input	..	-
+malformed_input	1ee1	-
+malformed_input	1e.1	-
+input_too_short		-
+input_too_long	123456789012345678	-
+input_too_long	1e12345	-
