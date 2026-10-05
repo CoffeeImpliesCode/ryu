@@ -24,7 +24,26 @@
 //!    Zig and Ryu deliberately disagree about.
 //!
 //! The error-path tests are the other half: what the facade refuses, and the
-//! fact that a refused call writes nothing at all.
+//! fact that a refusal it makes before calling C leaves the caller's buffer
+//! byte for byte as it was.
+//!
+//! Two more kinds of evidence sit alongside those, each only where it can be
+//! real. The owned-string tests use upstream's own four allocating entry points
+//! and release what they get with the C library's `free`, which is the
+//! allocator that produced it; they check the answers and the release path and
+//! do not pretend to a leak check, because the test framework's allocator is
+//! not the one whose leak this would be. The generic 128-bit tests exist only
+//! in a build configured with `-Dgeneric128` and say so when they are skipped.
+//!
+//! ## The provider in a runtime-loading build
+//!
+//! `RYU_TEST_PROVIDER` names a shared object exporting the sixteen entry points
+//! `ryu/ryu.h` and `ryu/ryu_parse.h` declare, plus the five of
+//! `ryu/ryu_generic_128.h` when this build configured `-Dgeneric128`. Every test
+//! calls `nativeReady` before it touches the facade, which is a no-op at comptime
+//! in a linked build and the one explicit `load` in a runtime-loading one.
+//! Nothing is skipped when the variable is unset: a suite that quietly stopped
+//! testing because a variable was missing would report success for nothing.
 //!
 //! No test here pins a version string, an export, a default, or a call that
 //! merely does not fail. Every one either reproduces a published answer,
@@ -32,6 +51,52 @@
 
 const std = @import("std");
 const ryu = @import("ryu");
+
+/// A shared object exporting Ryu's entry points, named by the environment in a
+/// runtime-loading build.
+const provider_variable = "RYU_TEST_PROVIDER";
+
+/// Make the native library usable, once, before a test calls the facade.
+///
+/// In a linked build the facade is usable already and this is a no-op at
+/// comptime. In a runtime-loading build every call into the module goes through
+/// a table that `load` fills, so this is where the one explicit load happens.
+/// It is safe to call from every test: the contract makes the same request
+/// idempotent, and the loader keeps the handle to the end of the process.
+///
+/// A build that was not told which file to load stops here with the variable's
+/// name, rather than reporting a test failure that says nothing about the
+/// reason.
+fn nativeReady() void {
+    if (comptime !ryu.runtime_loaded) return;
+    if (ryu.loadedSource() != null) return;
+
+    var buffer: [4096]u8 = undefined;
+    const value = std.testing.environ.getAlloc(std.testing.allocator, provider_variable) catch
+        missingProvider();
+    defer std.testing.allocator.free(value);
+    if (value.len == 0 or value.len > buffer.len) missingProvider();
+    @memcpy(buffer[0..value.len], value);
+    ryu.load(.{ .path = buffer[0..value.len] }) catch |err| {
+        std.debug.print(
+            "tests.zig: loading " ++ provider_variable ++ " = \"{s}\" failed: {t}\n",
+            .{ buffer[0..value.len], err },
+        );
+        @panic("tests.zig: the provider named by " ++ provider_variable ++
+            " did not load; nothing below this line ran");
+    };
+}
+
+fn missingProvider() noreturn {
+    @panic(
+        "tests.zig: this is a runtime-loading build and " ++ provider_variable ++
+            " is not set. Point it at a shared object exporting the entry " ++
+            "points of ryu/ryu.h and ryu/ryu_parse.h, for example the one " ++
+            "`zig build -Dlinkage=dynamic` installs, and export it for the whole " ++
+            "`zig build` invocation: the build cannot inject a path into a run " ++
+            "step's environment.",
+    );
+}
 
 /// A line-oriented reader over one `testdata/` fixture, skipping the `#`
 /// header and any blank line.
@@ -163,6 +228,7 @@ fn expectBothPrecisionStyles(
 // --- 1. Published known answers ------------------------------------------------
 
 test "binary64 shortest reproduces every published answer" {
+    nativeReady();
     // The count is here only so a fixture that stopped parsing cannot turn
     // this into a loop that never runs. The assertions are the comparisons.
     var fixture = Fixture.init("testdata/d2s_shortest.txt");
@@ -185,6 +251,7 @@ test "binary64 shortest reproduces every published answer" {
 }
 
 test "binary32 shortest reproduces every published answer" {
+    nativeReady();
     var fixture = Fixture.init("testdata/f2s_shortest.txt");
     var seen: usize = 0;
     while (fixture.next()) |line| {
@@ -205,6 +272,7 @@ test "binary32 shortest reproduces every published answer" {
 }
 
 test "binary64 fixed point reproduces every published answer" {
+    nativeReady();
     var fixture = Fixture.init("testdata/d2fixed.txt");
     var seen: usize = 0;
     while (fixture.next()) |line| {
@@ -232,6 +300,7 @@ test "binary64 fixed point reproduces every published answer" {
 }
 
 test "binary64 scientific reproduces every published answer" {
+    nativeReady();
     var fixture = Fixture.init("testdata/d2exp.txt");
     var seen: usize = 0;
     while (fixture.next()) |line| {
@@ -258,6 +327,7 @@ test "binary64 scientific reproduces every published answer" {
 // --- 2. An independent parser reads the published answers back -----------------
 
 test "every published binary64 shortest answer names the fixture's own value" {
+    nativeReady();
     var fixture = Fixture.init("testdata/d2s_shortest.txt");
     while (fixture.next()) |line| {
         var fields = std.mem.splitSequence(u8, line, "\t");
@@ -276,6 +346,7 @@ test "every published binary64 shortest answer names the fixture's own value" {
 }
 
 test "every published binary32 shortest answer names the fixture's own value" {
+    nativeReady();
     var fixture = Fixture.init("testdata/f2s_shortest.txt");
     while (fixture.next()) |line| {
         var fields = std.mem.splitSequence(u8, line, "\t");
@@ -293,6 +364,7 @@ test "every published binary32 shortest answer names the fixture's own value" {
 // --- 3. An independent formatter agrees on the digits -------------------------
 
 test "binary64 shortest agrees with Zig's own shortest formatter" {
+    nativeReady();
     // Zig's `{e}` is Errol/Grisu, Ryu is Ryu. Neither derives from the other,
     // so agreement over this set is evidence about the digits and the
     // exponent, not about a shared implementation.
@@ -320,6 +392,7 @@ test "binary64 shortest agrees with Zig's own shortest formatter" {
 }
 
 test "binary32 shortest agrees with Zig's own shortest formatter" {
+    nativeReady();
     const cases = [_]f32{
         0.0,           -0.0,
         1.0,           -1.0,
@@ -342,6 +415,7 @@ test "binary32 shortest agrees with Zig's own shortest formatter" {
 }
 
 test "fixed point agrees with Zig's own formatter away from a tie" {
+    nativeReady();
     // Ties are excluded on purpose, and not because they are hard to predict:
     // Ryu rounds a tie to even and Zig's own source says its Errol path rounds
     // a tie toward zero, which the two published fixtures already pin from the
@@ -380,6 +454,7 @@ test "fixed point agrees with Zig's own formatter away from a tie" {
 }
 
 test "scientific agrees with Zig's own formatter away from a tie" {
+    nativeReady();
     const cases = [_]struct { value: f64, precision: u32 }{
         .{ .value = 1.25, .precision = 2 },
         .{ .value = 1.25, .precision = 5 },
@@ -414,6 +489,7 @@ test "scientific agrees with Zig's own formatter away from a tie" {
 // --- The tie behaviour the published fixtures pin, stated directly ------------
 
 test "a tie rounds to even in both fixed and scientific" {
+    nativeReady();
     // These four come from upstream's own RoundToEvenInteger cases. They are
     // repeated here because they are the one place where Ryu and Zig's own
     // formatter deliberately differ, so a reader of this file can see the
@@ -430,6 +506,7 @@ test "a tie rounds to even in both fixed and scientific" {
 }
 
 test "a run of nines carries out of the fraction" {
+    nativeReady();
     // `precision` counts the digits after the point in the fixed form and the
     // digits after the leading digit in the scientific one, so a carry out of
     // the fraction needs one more nine than either count can hold. `9.9999`
@@ -454,6 +531,7 @@ test "a run of nines carries out of the fraction" {
 }
 
 test "a run of nines one digit short of the precision does not carry" {
+    nativeReady();
     // The other side of the same boundary, and the case a reader is most likely
     // to get wrong in the opposite direction. `0.9999` is exactly four
     // significant digits as a binary64 - the nearest double is
@@ -477,6 +555,7 @@ test "a run of nines one digit short of the precision does not carry" {
 // --- What the writers do to the caller's buffer -------------------------------
 
 test "the shortest writer stops at the answer and leaves the rest alone" {
+    nativeReady();
     var buffer: [ryu.double_shortest_capacity]u8 = @splat(untouched);
     const got = try ryu.format64Shortest(1.7976931348623157e308, &buffer);
     try std.testing.expectEqualStrings("1.7976931348623157E308", got);
@@ -484,6 +563,7 @@ test "the shortest writer stops at the answer and leaves the rest alone" {
 }
 
 test "the fixed and scientific writers stop at the answer" {
+    nativeReady();
     const fixed_needed = try ryu.fixedCapacity(17);
     const fixed_buffer = try std.testing.allocator.alloc(u8, fixed_needed);
     defer std.testing.allocator.free(fixed_buffer);
@@ -502,6 +582,7 @@ test "the fixed and scientific writers stop at the answer" {
 }
 
 test "a short buffer is enough when it holds the exact answer" {
+    nativeReady();
     // The boundary being proved is that a buffer exactly as long as this
     // particular answer is accepted, so each buffer is sized to the answer it
     // is given and no byte more. A sign, a point and an exponent marker are
@@ -520,6 +601,7 @@ test "a short buffer is enough when it holds the exact answer" {
 }
 
 test "a short buffer one byte too short is refused and left untouched" {
+    nativeReady();
     var two: [2]u8 = @splat(untouched);
     try std.testing.expectError(error.BufferTooSmall, ryu.format64Shortest(1.0, &two));
     try expectUntouched(&two);
@@ -530,6 +612,7 @@ test "a short buffer one byte too short is refused and left untouched" {
 }
 
 test "an empty buffer is refused by all four writers" {
+    nativeReady();
     var empty_buffer: [0]u8 = undefined;
     const empty: []u8 = &empty_buffer;
     try std.testing.expectError(error.BufferTooSmall, ryu.format32Shortest(1.0, empty));
@@ -539,6 +622,7 @@ test "an empty buffer is refused by all four writers" {
 }
 
 test "the precision writers refuse one byte short of their published bound" {
+    nativeReady();
     const fixed_needed = try ryu.fixedCapacity(3);
     const fixed_buffer = try std.testing.allocator.alloc(u8, fixed_needed - 1);
     defer std.testing.allocator.free(fixed_buffer);
@@ -556,46 +640,36 @@ test "the precision writers refuse one byte short of their published bound" {
 
 // --- The capacity bound --------------------------------------------------------
 
-test "the nine byte special value is the whole bound at the two precisions it sizes" {
-    // `-Infinity` is nine bytes - a sign and eight - and upstream writes it in
-    // the fixed and the scientific family alike
-    // (`ryu/d2fixed.c:349-355`, reached from `ryu/d2fixed.c:375-376` and from
-    // `ryu/d2fixed.c:583-584`). At precision 0 and at precision 1 that string
-    // is the longest answer either writer can produce: a number at precision 1
-    // spends a sign, a digit, a point, one fraction digit, `e`, an exponent
-    // sign and three exponent digits, which is eight. So the bound at those
-    // two precisions is exactly the special value, and this measures that
-    // against the answer itself rather than against the arithmetic that
-    // produces the bound.
-    for ([_]u32{ 0, 1 }) |precision| {
-        try std.testing.expectEqual(@as(usize, 9), try ryu.scientificCapacity(precision));
+test "special scientific outputs fit the minimum-precision buffer" {
+    nativeReady();
+    // `_MSC_VER` permits "-nan(snan)" (ten bytes); other builds emit "nan".
+    // These are source-defined alternatives, not a claim about this host's
+    // compiler selecting the MSVC branch (`ryu/d2fixed.c:331-355`).
+    const precision = 0;
+    const bound = try ryu.scientificCapacity(precision);
+    const buffer = try std.testing.allocator.alloc(u8, bound);
+    defer std.testing.allocator.free(buffer);
+    try std.testing.expectEqualStrings(
+        "-Infinity",
+        try ryu.format64Scientific(-std.math.inf(f64), precision, buffer),
+    );
+    const signalling: f64 = @bitCast(@as(u64, 0xfff0000000000001));
+    const text = try ryu.format64Scientific(signalling, precision, buffer);
+    try std.testing.expect(std.mem.eql(u8, text, "nan") or
+        std.mem.eql(u8, text, "-nan(snan)"));
 
-        // The nine byte buffer is the bound exactly, so this is also an
-        // exact-fit case: an answer that fills the whole bound, accepted.
-        var nine: [9]u8 = @splat(untouched);
-        try std.testing.expectEqualStrings(
-            "-Infinity",
-            try ryu.format64Scientific(-std.math.inf(f64), precision, &nine),
-        );
-
-        const fixed_buffer = try std.testing.allocator.alloc(u8, try ryu.fixedCapacity(precision));
-        defer std.testing.allocator.free(fixed_buffer);
-        @memset(fixed_buffer, untouched);
-        const fixed_got = try ryu.format64Fixed(-std.math.inf(f64), precision, fixed_buffer);
-        try std.testing.expectEqualStrings("-Infinity", fixed_got);
-        try expectUntouched(fixed_buffer[fixed_got.len..]);
-
-        // One byte short of the answer is refused, and nothing is written.
-        var eight: [8]u8 = @splat(untouched);
-        try std.testing.expectError(
-            error.BufferTooSmall,
-            ryu.format64Scientific(-std.math.inf(f64), precision, &eight),
-        );
-        try expectUntouched(&eight);
-    }
+    const short = try std.testing.allocator.alloc(u8, bound - 1);
+    defer std.testing.allocator.free(short);
+    @memset(short, untouched);
+    try std.testing.expectError(
+        error.BufferTooSmall,
+        ryu.format64Scientific(-std.math.inf(f64), precision, short),
+    );
+    try expectUntouched(short);
 }
 
 test "the widest published integer part fits the bound it is measured against" {
+    nativeReady();
     // 1.7976931348623157e308 at precision 0 is 309 digits: the largest finite
     // binary64 has a 309 digit floor, which is what
     // `max_fixed_integer_digits` says.
@@ -610,38 +684,96 @@ test "the widest published integer part fits the bound it is measured against" {
     try std.testing.expectEqual(ryu.max_fixed_integer_digits, got.len);
 }
 
-test "a precision no capacity can measure is refused rather than wrapped" {
-    // An answer at any precision contains at least the precision digits
-    // themselves plus one integer digit, so no honest capacity is smaller than
-    // that. A bound that came back below it would be a wrapped number instead
-    // of a capacity, and the caller would then hand the writer a buffer far
-    // too small for the answer that is about to be written into it - a silent
-    // overrun rather than an error.
+test "the precision the scientific writer cannot represent is refused, not formatted" {
+    nativeReady();
+    // `d2exp_buffered_n` raises its own `uint32_t` precision by one before it
+    // formats anything (`ryu/d2fixed.c:616`), so `maxInt(u32)` wraps to zero
+    // there and the writer hands back a short, wrong answer instead of a long
+    // one: `1.0` at `maxInt(u32)` comes back as `0e+00`. The write stays
+    // inside the buffer the caller sized, so nothing downstream notices. The
+    // capacity query and the writer both refuse that precision, and the refusal
+    // happens before `out` is even measured, which is why a buffer far too
+    // small for the answer still gets `error.PrecisionTooLarge` rather than
+    // `error.BufferTooSmall` and is left exactly as it was.
     const huge = std.math.maxInt(u32);
-    const minimum: u64 = @as(u64, huge) + 1;
-    const widest: u64 = @as(u64, std.math.maxInt(usize));
+    try std.testing.expectError(error.PrecisionTooLarge, ryu.scientificCapacity(huge));
 
-    if (minimum > widest) {
-        // A target whose `usize` cannot even hold the digits must say so.
-        try std.testing.expectError(error.PrecisionTooLarge, ryu.fixedCapacity(huge));
-        try std.testing.expectError(error.PrecisionTooLarge, ryu.scientificCapacity(huge));
-    } else {
-        // Otherwise the whole bound comes back, and it is at least the number
-        // of digits the answer has to contain.
-        const least: usize = @intCast(minimum);
-        try std.testing.expect(try ryu.fixedCapacity(huge) >= least);
-        try std.testing.expect(try ryu.scientificCapacity(huge) >= least);
+    var buffer: [16]u8 = @splat(untouched);
+    try std.testing.expectError(
+        error.PrecisionTooLarge,
+        ryu.format64Scientific(1.0, huge, &buffer),
+    );
+    try expectUntouched(&buffer);
+
+    // The same for a value whose answer is one of the special strings, which
+    // takes a different path inside the writer and does not touch `precision`
+    // at all - so the refusal cannot be a by-product of the digit loop.
+    try std.testing.expectError(
+        error.PrecisionTooLarge,
+        ryu.format64Scientific(-std.math.inf(f64), huge, &buffer),
+    );
+    try expectUntouched(&buffer);
+}
+
+test "each precision writer's last accepted precision is its last representable answer" {
+    nativeReady();
+    // Both writers accumulate into an `int` index and return it
+    // (`ryu/d2fixed.c:405` and `ryu/d2fixed.c:617`, declared `int` at
+    // `ryu/ryu.h:34` and `ryu/ryu.h:38`), so an answer longer than that return
+    // cannot be reported: the index wraps and the caller is handed a length
+    // that has nothing to do with what was written. The largest precision that
+    // still fits is therefore the width of that return minus whatever the
+    // style spends around `precision`, and the two styles have different
+    // overheads, so their limits differ. This measures the boundary through
+    // the capacity queries, which cost nothing; actually formatting at it
+    // would need a two gigabyte buffer, which is not what this suite does.
+    const written_max: usize = @intCast(std.math.maxInt(c_int));
+
+    // Each style's overhead, read back out of a precision large enough that
+    // the special-value floor does not apply, and checked against the shape
+    // the writers have.
+    const fixed_overhead = try ryu.fixedCapacity(16) - 16;
+    const scientific_overhead = try ryu.scientificCapacity(16) - 16;
+    try std.testing.expectEqual(1 + ryu.max_fixed_integer_digits + 1, fixed_overhead);
+    try std.testing.expectEqual(@as(usize, 8), scientific_overhead);
+
+    const fixed_last: u32 = @intCast(written_max - fixed_overhead);
+    const scientific_last: u32 = @intCast(written_max - scientific_overhead);
+    try std.testing.expectEqual(written_max, try ryu.fixedCapacity(fixed_last));
+    try std.testing.expectEqual(written_max, try ryu.scientificCapacity(scientific_last));
+
+    // One past each limit is refused, and so is the far end of the `u32`, on
+    // every target rather than only where `usize` is too narrow to hold the
+    // digits. The writers refuse them the same way, before writing.
+    for ([_]u32{ fixed_last + 1, std.math.maxInt(u32) }) |precision| {
+        try std.testing.expectError(error.PrecisionTooLarge, ryu.fixedCapacity(precision));
+        var buffer: [8]u8 = @splat(untouched);
+        try std.testing.expectError(
+            error.PrecisionTooLarge,
+            ryu.format64Fixed(1.25, precision, &buffer),
+        );
+        try expectUntouched(&buffer);
+    }
+    for ([_]u32{ scientific_last + 1, std.math.maxInt(u32) }) |precision| {
+        try std.testing.expectError(error.PrecisionTooLarge, ryu.scientificCapacity(precision));
+        var buffer: [8]u8 = @splat(untouched);
+        try std.testing.expectError(
+            error.PrecisionTooLarge,
+            ryu.format64Scientific(1.25, precision, &buffer),
+        );
+        try expectUntouched(&buffer);
     }
 }
 
 test "a precision far past any real answer is printed whole, not cut off" {
+    nativeReady();
     // The widest answers in the published fixtures are 1076 bytes of fixed
     // point and 757 of scientific, both from the smallest subnormal at
     // precision 1074 and 750 - a value with no integer part at all. A value
     // that has one is wider: at precision 1074 the largest finite binary64
     // reaches 309 integer digits, a point and 1074 fraction digits, because
     // upstream writes `precision` fraction digits whatever the value is
-    // (`ryu/d2fixed.c:445-448` and `ryu/d2fixed.c:545-548`). A precision far
+    // (`ryu/d2fixed.c:454-455` and `ryu/d2fixed.c:545-548`). A precision far
     // past any of that is still honoured in full, and the answer it produces
     // is exactly as long as the value and the precision say it is: 309 integer
     // digits, a point and 100_000 zeros for the fixed form; one leading digit,
@@ -672,6 +804,7 @@ test "a precision far past any real answer is printed whole, not cut off" {
 }
 
 test "negative zero keeps its sign in both precision writers" {
+    nativeReady();
     // The published fixtures carry `zero` and not `negzero` for these two
     // writers, so this is the one signed zero they do not cover. Upstream
     // writes the sign before the digit on the zero path of both
@@ -690,6 +823,7 @@ test "negative zero keeps its sign in both precision writers" {
 // --- The experimental parser ---------------------------------------------------
 
 test "the experimental binary64 parser reproduces every accepted input upstream names" {
+    nativeReady();
     var fixture = Fixture.init("testdata/s2d_parse.txt");
     var seen: usize = 0;
     while (fixture.next()) |line| {
@@ -715,6 +849,7 @@ test "the experimental binary64 parser reproduces every accepted input upstream 
 }
 
 test "the experimental binary32 parser reproduces every accepted input upstream names" {
+    nativeReady();
     var fixture = Fixture.init("testdata/s2f_parse.txt");
     var seen: usize = 0;
     while (fixture.next()) |line| {
@@ -739,6 +874,7 @@ test "the experimental binary32 parser reproduces every accepted input upstream 
 }
 
 test "the experimental parser is a real parse, not the formatter's own output" {
+    nativeReady();
     // Upstream's parser has a documented limit the formatter's shortest output
     // never reaches: at most 17 nonzero mantissa digits. Its own suite pins
     // 18 digits as INPUT_TOO_LONG while the shortest writer happily prints a
@@ -760,6 +896,7 @@ test "the experimental parser is a real parse, not the formatter's own output" {
 }
 
 test "the two experimental parsers refuse at their own mantissa widths" {
+    nativeReady();
     // Upstream's two parsers do not accept the same grammar, and the difference
     // is one the two documented limits name: `s2d_n` refuses at 17 nonzero
     // mantissa digits (`ryu/s2d.c:100-102`) and `s2f_n` at 9
@@ -777,4 +914,270 @@ test "the two experimental parsers refuse at their own mantissa widths" {
     // The tenth digit is inside `parse64`'s 17 and outside `parse32`'s 9.
     try std.testing.expectEqual(@as(f64, 1234567890.0), try ryu.experimental.parse64(ten));
     try std.testing.expectError(error.InputTooLong, ryu.experimental.parse32(ten));
+}
+
+// --- 3. Upstream's allocating entry points, and the allocator boundary -------
+//
+// These four entry points are real published API with no buffered equivalent,
+// so they are exercised against the same published fixtures rather than against
+// this module's own buffered answers: a wrong `d2s` would then have to be wrong
+// twice, in both the writer under test and the one it is compared to.
+
+test "the allocating shortest writers reproduce every published answer" {
+    nativeReady();
+    var binary64 = Fixture.init("testdata/d2s_shortest.txt");
+    var binary32 = Fixture.init("testdata/f2s_shortest.txt");
+    var seen: usize = 0;
+    while (binary64.next()) |line| {
+        var fields = std.mem.splitSequence(u8, line, "\t");
+        const value = try f64FromSpec(fields.next().?);
+        const expected = fields.next().?;
+        const owned = try ryu.format64ShortestOwned(value);
+        defer owned.deinit();
+        try std.testing.expectEqualStrings(expected, owned.slice());
+        // The length this module reports is the position of upstream's own
+        // terminator, not a length this module guessed: `d2s` NUL-terminates
+        // the 25 bytes it allocated (`ryu/d2s.c:498-508`) and the byte the
+        // returned length points at has to be that terminator.
+        try std.testing.expectEqual(@as(u8, 0), owned.bytes[owned.len]);
+        seen += 1;
+    }
+    while (binary32.next()) |line| {
+        var fields = std.mem.splitSequence(u8, line, "\t");
+        const value = try f32FromSpec(fields.next().?);
+        const expected = fields.next().?;
+        const owned = try ryu.format32ShortestOwned(value);
+        defer owned.deinit();
+        try std.testing.expectEqualStrings(expected, owned.slice());
+        try std.testing.expectEqual(@as(u8, 0), owned.bytes[owned.len]);
+        seen += 1;
+    }
+    try std.testing.expectEqual(@as(usize, 132 + 60), seen);
+}
+
+test "the allocating precision writers reproduce every published answer" {
+    nativeReady();
+    // The widest answer in either fixture is 1076 bytes at precision 1074 and
+    // 757 at precision 750 (`testdata/d2fixed.txt`, `testdata/d2exp.txt`), and
+    // upstream's own buffer for both writers is 2000 bytes
+    // (`ryu/d2fixed.c:558`, `ryu/d2fixed.c:815`). Every published row
+    // therefore fits, which is what lets one fixture walk stand for all 268 of
+    // them.
+    var fixed = Fixture.init("testdata/d2fixed.txt");
+    var scientific = Fixture.init("testdata/d2exp.txt");
+    var seen: usize = 0;
+    while (fixed.next()) |line| {
+        var fields = std.mem.splitSequence(u8, line, "\t");
+        const value = try f64FromSpec(fields.next().?);
+        const precision = try std.fmt.parseInt(u32, fields.next().?, 10);
+        const expected = fields.next().?;
+        const owned = try ryu.format64FixedOwned(value, precision);
+        defer owned.deinit();
+        try std.testing.expectEqualStrings(expected, owned.slice());
+        seen += 1;
+    }
+    while (scientific.next()) |line| {
+        var fields = std.mem.splitSequence(u8, line, "\t");
+        const value = try f64FromSpec(fields.next().?);
+        const precision = try std.fmt.parseInt(u32, fields.next().?, 10);
+        const expected = fields.next().?;
+        const owned = try ryu.format64ScientificOwned(value, precision);
+        defer owned.deinit();
+        try std.testing.expectEqualStrings(expected, owned.slice());
+        seen += 1;
+    }
+    try std.testing.expectEqual(@as(usize, 134 + 134), seen);
+}
+
+test "the owned precision writers refuse a precision upstream's own buffer cannot hold" {
+    nativeReady();
+    // `d2fixed` and `d2exp` each `malloc(2000)` and check nothing against it
+    // (`ryu/d2fixed.c:557-562`, `ryu/d2fixed.c:814-819`), so a precision whose
+    // answer does not fit is a buffer overflow inside upstream rather than a
+    // long answer. The refusal has to happen here, before the call, and the two
+    // bounds differ because the two styles spend different numbers of bytes
+    // around the fraction.
+    try std.testing.expectError(
+        error.PrecisionTooLarge,
+        ryu.format64FixedOwned(1.25, ryu.owned_max_fixed_precision + 1),
+    );
+    try std.testing.expectError(
+        error.PrecisionTooLarge,
+        ryu.format64ScientificOwned(1.25, ryu.owned_max_scientific_precision + 1),
+    );
+    try std.testing.expectError(
+        error.PrecisionTooLarge,
+        ryu.format64FixedOwned(1.25, std.math.maxInt(u32)),
+    );
+    try std.testing.expectError(
+        error.PrecisionTooLarge,
+        ryu.format64ScientificOwned(1.25, std.math.maxInt(u32)),
+    );
+
+    // The fixed writer's last accepted precision still formats, and on a
+    // negative value it fills upstream's buffer to the last byte: a sign, 309
+    // integer digits, a point and 1688 fraction digits is 1999 bytes, and the
+    // terminator `d2fixed_buffered` writes after it is the 2000th. If the
+    // bound were one too high this is where it shows, as an answer that does
+    // not come back rather than as a quiet overrun.
+    const widest = try ryu.format64FixedOwned(-1.7976931348623157e308, ryu.owned_max_fixed_precision);
+    defer widest.deinit();
+    try std.testing.expectEqual(@as(usize, 1999), widest.len);
+    try std.testing.expectEqual(@as(u8, '-'), widest.slice()[0]);
+    try std.testing.expectEqual(@as(u8, '.'), widest.slice()[ryu.max_fixed_integer_digits + 1]);
+    // DBL_MAX has no fractional part, so every digit after the point is the
+    // zero padding `precision` asked for.
+    for (widest.slice()[ryu.max_fixed_integer_digits + 2 ..]) |byte| {
+        if (byte != '0') return error.FractionIsNotZeroPadded;
+    }
+}
+
+// --- 4. The optional generic 128-bit converter --------------------------------
+//
+// Every test in this section is skipped, and says so, in a build that did not
+// configure `-Dgeneric128`: the five entry points were neither compiled into
+// the artifact nor translated, and `generic128` is `void` because there is
+// nothing there to call. A skipped test is visible in the run; a build that
+// quietly tested nothing would not be.
+
+test "the generic converter answers the published shortest spelling" {
+    nativeReady();
+    if (comptime ryu.generic128 == void) return error.SkipZigTest;
+
+    var out: [ryu.generic128.to_chars_capacity]u8 = undefined;
+    // Upstream's own answers for these values, from the generic converter's own
+    // suite: ryu/ryu/tests/generic_128_test.cc:265-287, whose local `d2s()`
+    // (:249-257) is `double_to_fd128` + `generic_to_chars`, the two calls
+    // `shortestChars(f64, ...)` makes. The shortest writer's suite agrees
+    // (ryu/ryu/tests/d2s_test.cc:52-53) and so does testdata/d2s_shortest.txt:44.
+    // The generic converter spells an exponent the same way - uppercase `E`, no
+    // `+`, no padding (ryu/generic_128.c:331-345) - so the same strings hold.
+    try std.testing.expectEqualStrings("1.25E0", try ryu.generic128.shortestChars(f64, 1.25, &out));
+    try std.testing.expectEqualStrings("0E0", try ryu.generic128.shortestChars(f64, 0.0, &out));
+    try std.testing.expectEqualStrings("-0E0", try ryu.generic128.shortestChars(f64, -0.0, &out));
+    try std.testing.expectEqualStrings("1.25E0", try ryu.generic128.shortestChars(f32, 1.25, &out));
+    try std.testing.expectEqualStrings(
+        "1.7976931348623157E308",
+        try ryu.generic128.shortestChars(f64, 1.7976931348623157e308, &out),
+    );
+    try std.testing.expectEqualStrings("5E-324", try ryu.generic128.shortestChars(f64, 5e-324, &out));
+
+    // The typed converters and the bit-pattern route have to agree, because
+    // `generic_binary_to_decimal` is the same function `double_to_fd128` calls
+    // (`ryu/generic_128.c:61-65`): a disagreement here would mean the three
+    // configuration arguments are read in the wrong order.
+    const direct = ryu.generic128.fromDouble(1.25);
+    const from_bits = ryu.generic128.fromBinary(
+        @as(ryu.generic128.Mantissa, @as(u64, @bitCast(@as(f64, 1.25)))),
+        52,
+        11,
+        false,
+    );
+    try std.testing.expectEqual(direct.mantissa, from_bits.mantissa);
+    try std.testing.expectEqual(direct.exponent, from_bits.exponent);
+    try std.testing.expectEqual(direct.sign, from_bits.sign);
+
+    // `decimalFor` is the same three converters without the caller naming them,
+    // so an f32 cannot reach the binary64 converter and be cast - the mistake
+    // upstream's header warns about twice (`ryu/ryu_generic_128.h:29-31`).
+    // `0.1f` is shortest as the decimal `0.1`, which double-conversion asserts
+    // (`third_party/double-conversion/test/cctest/test-conversions.cc:229-230`),
+    // and `ryu/generic_128.c:331-345` spells that `1E-1`.
+    try std.testing.expectEqualStrings("1E-1", try ryu.generic128.shortestChars(f32, 0.1, &out));
+    try std.testing.expectEqualStrings(
+        "1E-1",
+        try ryu.generic128.toChars(ryu.generic128.decimalFor(f32, 0.1), &out),
+    );
+}
+
+test "the generic converter marks the non-finite values the way its writer expects" {
+    nativeReady();
+    if (comptime ryu.generic128 == void) return error.SkipZigTest;
+
+    var out: [ryu.generic128.to_chars_capacity]u8 = undefined;
+    const infinite = ryu.generic128.fromDouble(std.math.inf(f64));
+    const negative_infinite = ryu.generic128.fromDouble(-std.math.inf(f64));
+    const not_a_number = ryu.generic128.fromDouble(std.math.nan(f64));
+
+    // `FD128_EXCEPTIONAL_EXPONENT` is the only thing that separates these three
+    // from an ordinary decimal as far as the writer is concerned
+    // (`ryu/generic_128.c:296-298`), so it has to be there for all three and
+    // the mantissa has to be zero for the two infinities.
+    for ([_]ryu.generic128.Decimal{ infinite, negative_infinite, not_a_number }) |decimal| {
+        try std.testing.expectEqual(
+            ryu.generic128.exceptional_exponent,
+            @as(i32, @intCast(decimal.exponent)),
+        );
+    }
+    try std.testing.expectEqual(@as(ryu.generic128.Mantissa, 0), infinite.mantissa);
+    try std.testing.expectEqual(@as(ryu.generic128.Mantissa, 0), negative_infinite.mantissa);
+    try std.testing.expect(!infinite.sign);
+    try std.testing.expect(negative_infinite.sign);
+
+    // The writer's three spellings, from `copy_special_str`
+    // (`ryu/generic_128.c:284-294`): a NaN carries no sign whatever `sign` is,
+    // which is why a negative NaN is "NaN" and not "-NaN".
+    try std.testing.expectEqualStrings("Infinity", try ryu.generic128.toChars(infinite, &out));
+    try std.testing.expectEqualStrings("-Infinity", try ryu.generic128.toChars(negative_infinite, &out));
+    try std.testing.expectEqualStrings("NaN", try ryu.generic128.toChars(not_a_number, &out));
+
+    const negative_nan = ryu.generic128.fromDouble(-std.math.nan(f64));
+    try std.testing.expectEqualStrings("NaN", try ryu.generic128.toChars(negative_nan, &out));
+}
+
+test "the generic converter stops at the answer and refuses a buffer one byte short" {
+    nativeReady();
+    if (comptime ryu.generic128 == void) return error.SkipZigTest;
+
+    var tight: [6]u8 = undefined;
+    try std.testing.expectEqualStrings("1.25E0", try ryu.generic128.shortestChars(f64, 1.25, &tight));
+
+    var one_short: [5]u8 = @splat(untouched);
+    try std.testing.expectError(
+        error.BufferTooSmall,
+        ryu.generic128.shortestChars(f64, 1.25, &one_short),
+    );
+    try expectUntouched(&one_short);
+
+    var empty_buffer: [0]u8 = undefined;
+    try std.testing.expectError(
+        error.BufferTooSmall,
+        ryu.generic128.shortestChars(f64, 1.25, &empty_buffer),
+    );
+
+    // The residue past the answer is the caller's, as on every other writer here.
+    var padded: [ryu.generic128.to_chars_capacity]u8 = @splat(untouched);
+    const got = try ryu.generic128.shortestChars(f64, 1.25, &padded);
+    try std.testing.expectEqualStrings("1.25E0", got);
+    try expectUntouched(padded[got.len..]);
+}
+
+test "the x87 long double converter reads the format upstream says it reads" {
+    nativeReady();
+    if (comptime ryu.generic128 == void) return error.SkipZigTest;
+    // Upstream's header qualifies this entry point itself: it "likely only
+    // works on x86 with specific compilers (clang?)"
+    // (`ryu/ryu_generic_128.h:50-51`), because the converter is told 64 mantissa
+    // bits, 15 exponent bits and an explicit leading bit
+    // (`ryu/generic_128.c:80`) and `memcpy`s a whole `long double` into the
+    // bit pattern (`ryu/generic_128.c:70-72`). Those numbers are x87's. So the
+    // published answer is checked only where `long double` really is that
+    // format, and the test is skipped elsewhere rather than asserting an answer
+    // upstream does not promise there.
+    // On the pinned Zig the translated header spells that parameter
+    // `c_longdouble`, so `LongDouble` is that opaque type rather than `f80` on
+    // any target, and Zig cannot spell a value for it at all
+    // (`lib/std/zig/c_translation/helpers.zig:387`). The guard is a hard
+    // boundary: removing it would not make this test pass, it would not compile.
+    if (comptime ryu.generic128.LongDouble != f80) return error.SkipZigTest;
+
+    var out: [ryu.generic128.to_chars_capacity]u8 = undefined;
+    try std.testing.expectEqualStrings(
+        "1.25E0",
+        try ryu.generic128.toChars(ryu.generic128.fromLongDouble(1.25), &out),
+    );
+    try std.testing.expectEqualStrings(
+        "1.25E0",
+        try ryu.generic128.shortestChars(ryu.generic128.LongDouble, 1.25, &out),
+    );
 }

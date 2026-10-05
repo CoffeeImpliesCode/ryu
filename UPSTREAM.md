@@ -24,7 +24,7 @@ pre-release field: `.version = "2.0.0-dev.4c0618b"`.
 
 Where each of the rest comes from, read out of the carried tree:
 
-* The licence is `README.md:35-38`: "All code outside of third_party/ is
+* The licence is `README.upstream.md:35-38`: "All code outside of third_party/ is
   copyrighted by Ulf Adams and contributors, and may be used freely in accordance
   with the Apache 2.0 license. Alternatively, the files in the ryu/ directory may
   be used freely in accordance with the Boost 1.0 license." Both texts ship
@@ -34,8 +34,8 @@ Where each of the rest comes from, read out of the carried tree:
   path, and what that means for the Java tree.
 * The authors are `CONTRIBUTORS`, three lines: Ulf Adams `<ulfjack@google.com>`,
   Stephan T. Lavavej `<stl@microsoft.com>`, Alexander Bolz `<alexbolz@web.de>`.
-* `README.md:78-79` points at the correctness proof: the PLDI'18 paper, with
-  upstream's own citation link. Nothing in this fork re-derives that result.
+* `README.upstream.md:78-79` points at the correctness proof: the PLDI'18 paper,
+  with upstream's own citation link. Nothing in this fork re-derives that result.
 
 **Tag signature: not verified here.** No GPG key was consulted and no git
 command was run while this file was written. Treat the commit id and the archive
@@ -67,12 +67,9 @@ The output must read
 
 A full clone of the canonical repository, so upstream's Git history is present.
 This fork adds no patch series on top of that history: the Zig package is a set
-of new files in new regions, and exactly two upstream-tracked files are edited
-rather than one.
+of new files in new regions, and **three** upstream-tracked paths differ from
+the pinned commit. None of the three is a rewritten algorithm.
 
-* `.gitignore` gains appended ignore entries for this fork's Zig caches
-  (`NOTICE.md`). No line upstream wrote there is changed or removed, and two
-  appended lines are the whole of the difference.
 * `ryu/ryu.h:24` reads `#include <stdint.h>` here and `#include <inttypes.h>`
   at commit `4c0618b0e44f7ef027ebae05d2cc7812048f7c8f`. That include carries
   one name into the header, `uint32_t`, used in the six `precision` parameters
@@ -82,11 +79,28 @@ rather than one.
   its declarations with `__END_DECLS`, whose replacement list starts with a
   `_Pragma` the pinned translator reads as ordinary tokens, which is what the
   nine NetBSD cells of the platform matrix hit.
+* `.gitignore` gains appended ignore entries for this fork's Zig caches
+  (`NOTICE.md`). No line upstream wrote there is changed or removed, and two
+  appended lines are the whole of the difference.
+* `README.md` **is this fork's README, and upstream's bytes are preserved rather
+  than discarded.** Upstream's `README.md` at the pinned commit is 343 lines
+  hashing to
+  `20572708ea26d19fd596f1c4a44097dbcb491cdf0517024d68bbb5d622d0ac93`;
+  `README.upstream.md` in this repository is that file, byte for byte, under a
+  new name. Nothing in it is fork prose and nothing in it is edited. `UPSTREAM.sha256`'s
+  Group D hashes `README.upstream.md` with exactly the digest `README.md` had
+  here, so the relocation moves a path and not a byte. Every citation of
+  upstream's README prose anywhere in this repository — the grant at `:35-38`,
+  the algorithm's origin at `:51-54`, the proof at `:78-79`, the do-not-cast
+  rule at `:16-17`, the Java divergence note at `:69-76` — was renamed from
+  `README.md:NN` to `README.upstream.md:NN` with the line numbers unchanged, so
+  each one still lands on the bytes its line number belongs to.
 
-That header edit is one line. `UPSTREAM.sha256` keeps upstream's digest for the
+The header edit is one line. `UPSTREAM.sha256` keeps upstream's digest for the
 path beside this tree's, and `verify.yml` requires upstream's bytes to reappear
-when that one include is put back. No other upstream-tracked path differs from
-the pinned commit.
+when that one include is put back. Every other upstream-tracked path is
+byte-identical to the pinned commit — which means a pinned-commit diff has
+exactly three paths to name, and this file has named all three.
 
 ## What this fork is
 
@@ -145,16 +159,16 @@ package builds, and this fork compiles none of it.
 
 * **Licence.** Every Java file carries only the Apache-2.0 header, for example
   `src/main/java/info/adams/ryu/RyuDouble.java:1-14`. The Boost alternative is
-  granted for "the files in the `ryu/` directory" (`README.md:35-38`), so the
-  Java tree is Apache-2.0 and has no Boost grant behind it. The distinction is
+  granted for "the files in the `ryu/` directory" (`README.upstream.md:35-38`), so
+  the Java tree is Apache-2.0 and has no Boost grant behind it. The distinction is
   recorded here and in `NOTICE.md` because the two choices are per-path, not
   per-project.
 * **Behaviour.** Upstream records that the Java implementation "differs from the
   output of `Double.toString` in some cases: sometimes the output is shorter
   (which is arguably more accurate) and sometimes the output may differ in the
-  precise digits output" (`README.md:69-72`, linking issue 83), and that while
-  the Java specification requires at least two digits, "We may change the Java
-  implementation in the future to support both" (`README.md:74-76`).
+  precise digits output" (`README.upstream.md:69-72`, linking issue 83), and that
+  while the Java specification requires at least two digits, "We may change the
+  Java implementation in the future to support both" (`README.upstream.md:74-76`).
 
 Consequences for a caller of **this** package: none of the Java behaviour is
 reachable through the Zig facade or through the installed C headers, and no
@@ -172,7 +186,7 @@ tables. The build compiles none of them and regenerates no table.
 **Not offered, and recorded as not satisfied rather than as vacuous.**
 
 There is deliberately no `b.systemIntegrationOption` in `build.zig` and no system
-branch. The Build owner recorded the reasoning at `build.zig:47-72`; the
+branch. The Build owner recorded the reasoning at `build.zig:188-213`; the
 underlying facts, all readable in this tree, are:
 
 * Upstream's own install rules publish `ryu/ryu.h` (`CMakeLists.txt:28`) and, on
@@ -189,7 +203,7 @@ underlying facts, all readable in this tree, are:
 * No installed ryu was found on the machine this package was built on: a file
   search of `/usr/include` for `ryu*` and of `/usr/lib` for `libryu*` returned
   nothing, checked 2026-10-01 before any build was attempted
-  (`build.zig:54-57`). That is an observation about one machine, not a claim about
+  (`build.zig:195-197`). That is an observation about one machine, not a claim about
   every distribution.
 
 So the honest statement is "this fork has no system mode and cannot honestly
@@ -200,9 +214,11 @@ directly; a caller who wants these parsers needs this tree.
 ## What is upstream's and is shipped unmodified
 
 Everything named in `build.zig.zon` `.paths` that this fork did not write, with
-the two exceptions named under "Import mechanism" called out where they sit:
-`.gitignore` gains two appended lines, and `ryu/ryu.h` carries the one patched
-include. Every other path below is byte-identical to the pinned commit.
+the three differences named under "Import mechanism" called out where they sit:
+`ryu/ryu.h` carries the one patched include, `.gitignore` gains two appended
+lines, and `README.md` is this fork's own document with upstream's bytes
+preserved at `README.upstream.md`. Every other path below is byte-identical to
+the pinned commit.
 
 | Path | What it is |
 |---|---|
@@ -214,7 +230,7 @@ include. Every other path below is byte-identical to the pinned commit.
 | `lean/`, `lean-toolchain`, `lakefile.toml`, `lake-manifest.json` | upstream's Lean 4 port |
 | `CMakeLists.txt`, `MODULE.bazel`, `.bazelrc`, `.bazelversion`, `.classpath`, `run_benchmark_linux.sh`, `run_benchmark.bat` | upstream's other build entry points, kept and not retargeted |
 | `.github/` | upstream's own `presubmit.yml`, byte-identical, driving Bazel on upstream's runners, plus this fork's `verify.yml` |
-| `LICENSE-Apache2`, `LICENSE-Boost`, `README.md`, `CONTRIBUTORS` | upstream's licence terms, README and authorship record |
+| `LICENSE-Apache2`, `LICENSE-Boost`, `README.upstream.md`, `CONTRIBUTORS` | upstream's licence terms, README and authorship record. `README.upstream.md` is upstream's `README.md`, preserved unedited under a new name so this fork can have a README of its own |
 | `.gitignore` | upstream's ignore list, with two appended lines (see `NOTICE.md`) |
 
 `build.zig.zon` `.paths` deliberately omits nothing that `build.zig` needs:
@@ -222,6 +238,24 @@ include. Every other path below is byte-identical to the pinned commit.
 `translate.h` are all listed, so a dependent that fetches the package receives a
 buildable, testable library rather than an archive with no header and no
 examples.
+
+Everything else in `.paths` is fork-authored, and `FORK-LICENSE.md` names each
+of these under the `Apache-2.0` grant: `build.zig`, `build.zig.zon`,
+`translate.h`, `zig/root.zig`, `tests.zig`, `smoke.zig`, `consumer/`,
+`testdata/`, `cross-test.profile.sh`, `.github/workflows/verify.yml`, the
+packaging files `package.nix`, `flake.nix`, `devenv.nix`, `devenv.yaml` and
+`.envrc`, and the documentation `README.md`, `README.zig.md`, `CHANGELOG.md`,
+`FORK-NOTES.md`, `UPSTREAM.md`, `UPSTREAM.sha256`, `NOTICE.md` and
+`FORK-LICENSE.md`.
+
+**A packaging consequence of that list, and it is a real one.** `README.upstream.md`,
+`FORK-LICENSE.md`, `package.nix`, `flake.nix`, `devenv.nix`, `devenv.yaml` and
+`.envrc` all have to be inside `.paths` for a fetched copy to be coherent:
+without `README.upstream.md` the licence citation `README.upstream.md:35-38`
+resolves to nothing, without `FORK-LICENSE.md` the grant for the fetched copy's
+own files is unstated, and without the Nix files the package cannot be built as
+a package. `flake.lock` and `devenv.lock` are deliberately **not** in that list:
+locks are the workspace driver's files, and a fork does not carry them.
 
 ## Integrity
 
@@ -234,8 +268,9 @@ bytes and keeps upstream's digest for the same path beside it; six are
 `translate.h`, which this fork wrote. The set is six groups — the six compiled
 units, all twelve headers in `ryu/`, all nine upstream test sources that the
 fixtures transcribe, the two licence texts plus the two files that state the
-grant and name the authors, the six fixtures, and the fork's one shipped C
-header. Check it from the repository root with:
+grant and name the authors — `LICENSE-Apache2`, `LICENSE-Boost`,
+`README.upstream.md` and `CONTRIBUTORS` — the six fixtures, and the fork's one
+shipped C header. Check it from the repository root with:
 
 ```
 sha256sum -c UPSTREAM.sha256
@@ -271,6 +306,12 @@ without shifting any line: the current total is **2689946 bytes**, and the
 The provenance workflow restores that entire include-and-notice line to
 upstream's include before checking the original digest.
 
+The README relocation moves no byte either: `README.upstream.md` hashes to
+`20572708ea26d19fd596f1c4a44097dbcb491cdf0517024d68bbb5d622d0ac93`, which is the
+digest `README.md` carried in Group D before this fork gave that path a README
+of its own, and the record's 38 paths and 2689946-byte total are unchanged. Only
+the path in the Group D line moved.
+
 **What the record establishes.** If it validates, the bytes a build compiles,
 the headers it installs, the oracle sources the fixtures were transcribed from
 and the licence terms this package ships are exactly the bytes it pins, and any
@@ -282,14 +323,16 @@ checks that deviation on its own.
 **What it does not establish.** It is not a signature, not a Git object id, and
 not a re-derivation from commit `4c0618b0e44f7ef027ebae05d2cc7812048f7c8f`: it
 is a hash of **this working tree**. That the tree differs from that commit in
-exactly two paths is established elsewhere, and neither leg of that has been run
+exactly three paths is established elsewhere, and neither leg of that has been run
 in this workspace — by the pinned-commit diff in `.github/workflows/verify.yml`
-(every path the pinned commit tracks must be byte-identical to it, with two
-named exceptions: `.gitignore`, which may only gain lines, and `ryu/ryu.h`,
-which must revert to upstream's bytes when `#include <inttypes.h>` is put back)
+(every path the pinned commit tracks must be byte-identical to it, with three
+named exceptions: `.gitignore`, which may only gain lines; `ryu/ryu.h`, which
+must revert to upstream's bytes when `#include <inttypes.h>` is put back; and
+`README.md`, which may be replaced only by this fork's README while upstream's
+bytes appear, unedited and at the recorded digest, at `README.upstream.md`)
 and, on a fresh machine, by the archive digest above. The two are complementary
 and neither substitutes for the other: this record fails if a hashed byte moves
-here whatever a commit says, and the commit diff fails if a third upstream path
+here whatever a commit says, and the commit diff fails if any other upstream path
 differs from the commit whatever this record says.
 
 **Packaging note.** `UPSTREAM.sha256` is a new file at the package root and is
@@ -305,9 +348,19 @@ records and no failures
 `README.zig.md` § "Verification status"; `CHANGELOG.md` entries 14–18 and
 `FORK-NOTES.md` notes 11–13 carry the rest of this wave.
 
+**Replay after the README relocation, 2026-10-04.** `sha256sum -c
+UPSTREAM.sha256` from this repository root: **38 records, 38 `OK`, exit 0**,
+including `20572708…  README.upstream.md` under its new name. That is an
+observation in this working copy and nothing more. It does not establish the
+record's other half — that every path it names survives `.paths` filtering in a
+fetched copy — because a checkout can hold a file the manifest does not list,
+and it is not a build, test or matrix gate. Both remaining claims are
+driver-owned.
+
 ## Divergence policy
 
-Exactly two upstream-tracked files are edited, and each edit is bounded:
+Exactly three upstream-tracked paths differ from the pinned commit, and each
+difference is bounded:
 
 * `.gitignore`, additively, so the fork's own `.zig-cache/` and `zig-out/` stay
   out of commits and out of the package. Two lines are appended; no line
@@ -316,22 +369,63 @@ Exactly two upstream-tracked files are edited, and each edit is bounded:
   mechanism": `#include <inttypes.h>` upstream, `#include <stdint.h>` here. It
   is a portability fix with an observed cause, and it moves no declaration,
   type, signature, constant or algorithm.
+* `README.md`, replaced by this fork's own README, with upstream's bytes
+  preserved unedited at `README.upstream.md` and hashed there at the digest
+  upstream's file had here. A re-sync that forgets to carry upstream's README
+  forward fails the integrity check rather than silently losing the licence
+  citation.
 
 Nothing else upstream is edited, moved, reformatted or deleted — not a source
 file, not another header, not a test, not a licence text, not a fixture, and
 not upstream's CI. The mechanism that enforces this is `verify.yml`'s
 licence-and-provenance job: it diffs every path the pinned commit tracks against
-that commit and fails on any path other than those two, then fixes the shape of
+that commit and fails on any path other than those three, then fixes the shape of
 each in a step of its own. `.gitignore` may only gain lines. `ryu/ryu.h` must
 hash to this tree's recorded digest and must hash to upstream's recorded digest
 once that one include is put back, so a header edited anywhere else, or edited
 by one line more, fails twice over.
 
+## Nix and devenv packaging
+
+Fork-authored. Nothing here touches an upstream byte.
+
+| File | What it is |
+|---|---|
+| `package.nix` | one source-only derivation, `{lib,stdenv,zig,pkg-config,linkage?="static",generic128?=false}`, consumed by both entry points. `src` is this repository minus build output, VCS metadata and development state; no fetch, no sibling import, no host path, no `builtins.getEnv`. It calls `zig build install --prefix "$out"` with `-Dcpu=baseline`, one `-Doptimize`, and `-Dlinkage` |
+| `flake.nix` | `packages.<system>.static`, `.shared`, `.default` (the existing static policy); a tools-only `devShells.default`; one pinned nixpkgs rev; guards on `zig_0_16.version` and `hostPlatform.system == buildPlatform.system` |
+| `devenv.nix`, `devenv.yaml`, `.envrc` | the canonical environment: tools only in `packages`, lazy `outputs.static` / `outputs.shared` / `outputs.default` over the same `package.nix`, namespaced `sdk:*` tasks with real `exec` commands |
+
+**The build graph owns every installed file.** `build.zig` installs the library,
+the public headers, `lib/pkgconfig/ryu.pc` and the licence record; `package.nix`
+installs none of them itself and only asserts the closure afterwards. It also
+does not restate upstream's C flags — `-std=gnu17` and the include root are
+`build.zig`'s decision, and a second place to keep in step is not worth having.
+
+`ryu.pc`'s `Libs.private` is `-lc` and nothing else: the core calls `malloc`,
+`free`, `memcpy` and `strlen` (`ryu/d2s.c:506`, `ryu/d2s.c:356` and the
+equivalents in `f2s.c` and `d2fixed.c`) and uses no `libm`, `libdl` or threading
+symbol. There is no installed tool and no runtime data file; `mainProgram` is
+`null`.
+
+`meta.license` is `asl20 or bsl1` — the native core's own upstream terms — and
+`meta.licenseFiles` names the thirteen licence and provenance files this
+repository ships, including the six `third_party/` corpora. The tree is not
+single-licensed and nothing in the output claims it is; `FORK-LICENSE.md` records
+the `Apache-2.0` grant for the fork's own files.
+
+No lock file is authored here: `flake.lock` and `devenv.lock` are the workspace
+driver's, and neither is in `.paths`.
+
+**Nothing here has been built.** No `nix` or `devenv` command has been run
+against these files, so their evaluation, their install layouts and the devenv
+shell are `PENDING-VERIFICATION`; `README.md` § 3b says the same.
+
 ## Synchronising with a new upstream release
 
 1. `git fetch upstream`, check out the new commit, and re-read the licence grant
-   in `README.md` — it is a prose paragraph, not a machine-readable marker, and
-   it is the only place the Boost alternative is granted.
+   in `README.upstream.md` — it is a prose paragraph, not a machine-readable
+   marker, and it is the only place the Boost alternative is granted. Carry that
+   file forward byte for byte; `UPSTREAM.sha256` hashes it and will say so.
 2. Replace `ryu/`, `src/`, `scripts/`, `third_party/`, `lean/` and the root
    build files wholesale from the new commit. Do not hand-patch upstream files
    to make a build problem go away. The one patch this fork carries is the

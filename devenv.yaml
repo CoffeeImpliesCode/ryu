@@ -1,0 +1,13 @@
+# devenv.yaml — inputs for the ryu SDK development environment.
+#
+# `devenv.nix` consumes exactly this file. The nixpkgs input is pinned to one
+# revision so the tool set in the development shell does not move under the
+# SDK; `devenv.lock` is the workspace driver's file and is not authored here.
+#
+# There is no `flake:` block and no `packages:` block. devenv reads the SDK's
+# derivation from `package.nix` through `devenv.nix`, and the SDK is
+# deliberately absent from the shell's package list.
+
+inputs:
+  nixpkgs:
+    url: github:cachix/devenv-nixpkgs/c2f38fe7f9e04d9aadd354d380f2bd40531d9737

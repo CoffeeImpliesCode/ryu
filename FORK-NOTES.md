@@ -15,9 +15,16 @@ are gaps rather than mistakes: a deleted test that no gate had yet counted, and
 a fingerprint that was shipped nowhere and replayed by nothing. Note 14 is a
 gate that had never been run, and note 15 is neither kind at all: its failure
 was in an SDK header this tree never needed, and what it took was one disclosed
-line rather than a workaround. `README.zig.md` § "Verification status" holds
-the authoritative current gate table; the ledger in § 0 below is the run history
+line rather than a workaround. `README.zig.md` § "Verification status" holds the
+authoritative current gate table; the ledger in § 0 below is the run history
 behind it.
+
+Two later notes are a different shape again. Note 18 is the one kind of find a
+red gate cannot produce: four present-tense claims in this repository's own
+documentation that were true when written and were not true of the tree by the
+time anyone read them, caught by reading the code rather than by running it.
+Note 19 is the opposite: a red gate whose cause was an unset environment
+variable in the invocation rather than a defect in the package.
 
 ---
 
@@ -69,10 +76,25 @@ behind it.
 | 41 | Current explicit six-target compile-only baseline | 2026-10-02 | 0 for all six | `local://foundation-cross-test-final-baseline.json`; `local://foundation-cross-test-final-baseline-ryu-<target>.log` |
 | 42 | Current workflow one-line native-header reversal excerpt | 2026-10-02 | 0; pristine 1,360-byte header and pinned SHA reproduced | `local://foundation-cross-test-evidence.json`, auxiliary check `ryu-native-include-notice-reversal` |
 | 43 | Filtered fetch, source/fetched record checks and materialised consumer after SDK documentation freezes | driver-owned closure | Per-gate status and final identity are outside this package | `FORKS.json.cross_test_wave.materialized_packages.ryu`; `local://foundation-cross-test-package-regression.json` |
+| 44 | `build test smoke install -Druntime=false`, both linkages × four optimize modes, `--prefix` outside the repository, `-j8 --summary all` | 2026-10-04T15:07–15:08Z | 0 × 8; `26/26 steps succeeded; 33/37 tests passed (4 skipped)` each | `local://foundation-current-native-index.json`, rows `ryu-current-native-{dynamic,static}-{Debug,ReleaseSafe,ReleaseFast,ReleaseSmall}`; one JSON receipt per gate under `<scratch>/current-native-evidence/` |
+| 45 | `build test smoke install -Druntime=true`, both linkages × four optimize modes, `RYU_PROVIDER` exported for the invocation, `-j8 --summary all` | 2026-10-04T15:07–15:14Z | 1 × 8; `25/27 steps succeeded (1 failed); 0/37 tests passed (37 crashed)` each, sole cause `RYU_TEST_PROVIDER` unset | `local://foundation-current-failures-ryu.json` |
+| 46 | `build test smoke install`, default configuration (`-Dgeneric128` off), both linkages × four optimize modes | 2026-10-04T23:37Z | 0 × 8; `26/26 steps succeeded; 32/36 tests passed (4 skipped)` each, `status: skipped-tests` | epoch `20261004T233628757747Z-69351`, rows `ryu-native-final-*` of `run.json` and their per-cell receipts |
+| 47 | the same on the runtime-loaded route, `RYU_PROVIDER` **and** `RYU_TEST_PROVIDER` exported, own provider | 2026-10-04T23:29Z | 0 × 8; `27/27 steps succeeded; 32/36 tests passed (4 skipped)` each, `status: skipped-tests` | epoch `20261004T232823091897Z-23133`, rows `ryu-loaded-final-*` of `run.json` and their per-cell receipts |
+| 48 | `cross-test`, full published 53-target matrix on this tree, `--jobs 8 --build-jobs 8` | 2026-10-04T23:57Z–2026-10-05T00:02Z | 0; **20 pass, 33 `build_only`, 0 fail, 0 partial** — not 53 passes | epoch `20261004T221720228710Z-45046`, `ryu-53-target-8.json`, `source_unchanged: true`, `jobs_honoured: true` |
+| 49 | whole-graph `check`, compile-only, no `-Dtarget`, the six required triples | 2026-10-05T01:45Z | 0; `failed: false`, `runtime_pass_claimed: false` | epoch `20261005T014547Z-797a73f2`, `baseline-ryu-check-2026-10-05T01-45-53.904710+00-00.json` |
+| 50 | `build test smoke install -Dgeneric128=true -Druntime=false`, both linkages × four optimize modes — the red run that found two wrong expectations | 2026-10-04T23:27Z | 1; `24/26 steps succeeded (1 failed); 33/36 tests passed (1 skipped, 2 failed)` each, `status: fail` × 8 | epoch `20261004T232718759106Z-40382`, `run.json` and its eight `ryu-native-generic128-*` cells |
+| 51 | the same command with the corrected expectations, native; and `-Druntime=true` for the other eight cells, provider this tree's own `libryu.so` | 2026-10-05T01:44Z and 01:50Z | 0 × 16; `35/36 tests passed (1 skipped)` each, `status: skipped-tests` — **partials, not passes** | epochs `20261005T014407332917Z-66097-ryu-native` and `20261005T015048544771Z-69523-ryu-loaded`, each with its eight cell receipts |
 
 This is the complete run history, in order. The current state of each gate is
 the table in `README.zig.md` § "Verification status"; every red row above
-describes files as they stood at that moment, not as they stand now.
+describes files as they stood at that moment, not as they stand now. Rows 44
+and 45 describe the state before the test-policy removal recorded in note 4:
+eight linked gates green across both linkages and all four optimize modes,
+and eight runtime-loaded gates red for one stated reason each. Note 19 unpacks
+that reason. **Rows 46, 47 and 51 close both of those gaps on the current
+tree**: the behavioural suite runs after the removal in every configuration,
+the loaded `test` step runs once `RYU_TEST_PROVIDER` is exported beside
+`RYU_PROVIDER`, and every cell of all three is a partial rather than a pass.
 
 Rows 29–38 are the cross-test wave and they changed what earlier rows mean.
 Rows 29–31 are the first native runs on the patched `ryu/ryu.h`, and rows
@@ -88,14 +110,27 @@ before the record was re-derived. Rows 33 and 34 are the two full-matrix runs,
 before and after the change; row 33 is the observation that produced the change
 and row 34 is what the change was worth.
 
+Rows 46–51 are the driver waves, and they are the current state of every gate
+this table lists. Row 48 is the full published matrix on this tree: **20 runtime
+PASS, 33 `build_only`, 0 fail** — not 53 passes, because `build_only` is
+compile coverage and never a pass. Row 49 is the compile-only whole-graph
+`check`, exit 0 with `runtime_pass_claimed: false` recorded under every exit
+code. Rows 46 and 47 are the default five-unit closure in all eight
+configurations each, and rows 50 and 51 are those same eight configurations
+twice over with `-Dgeneric128=true`: row 50 red on two wrong expectations of
+this fork's own, row 51 after their correction, sixteen cells at zero failures
+and one attributed ABI skip each. Note 21 takes row 51 apart.
+
 Two things have still never been run and no row above covers them:
 `zig build check -Dgeneric128=true` for any target, and any execution of this
 repository's own `.github/workflows/verify.yml`. The twelve `check` rows — six
-of them twice — are the **default five-unit graph**; the optional sixth unit
-has been compiled and run here for the native target only, and only before the
-header change. Row 23 is red for two unrelated reasons at once, which note 12
-unpacks. Row 7a is an intermediate smoke re-run kept in order rather than
-renumbered around; the numbers after it are the ones the notes below cite.
+of them twice — and row 49 are the **default five-unit graph**; the optional
+sixth unit has been compiled and run here for the native target only, before the
+header change in rows 14, 26, 27 and 28 and after it in rows 50 and 51, and for
+no foreign target at all. Row 23 is red for two unrelated reasons at once,
+which note 12 unpacks. Row 7a is an intermediate smoke re-run kept in order
+rather than renumbered around; the numbers after it are the ones the notes below
+cite.
 
 ---
 
@@ -245,6 +280,18 @@ it admits, never by how it was computed.
 
 **Status.** `OBSERVED` (receipt 2), repaired.
 
+**Test-policy amendment — PENDING-VERIFICATION.** The owned-string allocator
+loop claimed an allocator check but asserted only nonempty lengths and a loop
+count. Removed that entire fork test under AGENTS.md § 7; retained the meaningful
+tests without replacing or re-pinning literals. This changes no API, native
+code or allocator. Bound to the fork-added test; final SDK tests and smoke are
+driver-owned and have not run after removal.
+
+**No current test total is asserted in this package.** Every count in these four
+documents, `33/37` and `28/28` alike, is the number a named run printed. The
+suite has since lost the test above, so a current total is the driver's to
+produce, and no document here states one.
+
 ---
 
 ## 5. A short-buffer test must measure its buffer against its own answer
@@ -345,11 +392,12 @@ facade.
 **Cause.** Compile coverage for a Zig API comes from call sites, and this package
 has exactly two: `tests.zig` and `smoke.zig`.
 
-**Fix.** `check` compiles both roots for every target, and `build.zig:74-87`
-states the standing obligation: every public declaration in `zig/root.zig` must
-be called from one of them, or `check` stops covering it. Namespacing is not a
-call — a function reached through a public namespace still needs its own call
-site, because the namespace has no body to analyse.
+**Fix.** `check` compiles both roots for every target, and the section
+`build.zig` heads "How `check` proves the facade" states the standing
+obligation: every public declaration in `zig/root.zig` must be called from one
+of them, or `check` stops covering it. Namespacing is not a call — a function
+reached through a public namespace still needs its own call site, because the
+namespace has no body to analyse.
 
 **Bound to.** This package's choice to make `check` compile the two roots. It
 applies to any package whose gate proves the facade by compiling callers, and it
@@ -470,6 +518,13 @@ without a terminator and returns the count, and its header puts the worst case
 at 53 characters (`ryu/ryu_generic_128.h:59-66`), so the gate takes the count
 first, refuses anything outside `1 <= written < sizeof buffer`, and terminates
 the string itself.
+
+That same `long double` row is now the mirror image of a standing skip. From C
+the format is the language's own and the row above is green; from Zig it is
+opaque, `tests.zig:1172` declines to run on every target, and all sixteen
+`-Dgeneric128=true` cells of row 51 report exactly that one skip and nothing
+else. Note 21 carries the attribution and `README.zig.md` § "Verification
+status" carries the numbers; neither is restated here.
 
 **Status.** `OBSERVED` red (receipt 27), `OBSERVED` closed (receipt 28).
 
@@ -679,14 +734,14 @@ compiled units include `ryu/ryu.h` — `ryu/d2s.c:30`, `ryu/f2s.c:21`,
 (`ryu/s2d.c:18`, `ryu/s2f.c:18`), which declares no integer type at all, and
 each already includes `<stdint.h>` itself (`ryu/s2d.c:22`, `ryu/s2f.c:22`); their
 own `<inttypes.h>` blocks sit inside `#ifdef RYU_DEBUG`, and this build defines
-no `RYU_DEBUG` (`build.zig:118-120`). So the compiled ABI is upstream's own on
+no `RYU_DEBUG` (`build.zig:295-297`). So the compiled ABI is upstream's own on
 every target, and the header was the only route to the SDK header that this tree
 does not need.
 
 **What was deliberately not done.** No fork-authored replacement for
 `<inttypes.h>` or for any other libc header ships in this tree, no per-target
 conditional exists in `build.zig` (one graph, one root header, no `RYU_*` macro
-defined, `build.zig:244-263`), and nothing upstream published was dropped to
+defined, `build.zig:295-297`), and nothing upstream published was dropped to
 make the failure go away. A conditional workaround was rejected rather than
 shipped; this line is the whole change, and `UPSTREAM.sha256`, `NOTICE.md` and
 `README.zig.md` all name it rather than working around it.
@@ -714,7 +769,283 @@ those source-sensitive matrix, native and baseline results. The record replay
 and fresh materialised package result are driver-owned, under receipt 43.
 
 ---
+## 16. Giving a fork its own README relocates a path, not a byte
 
+**Condition.** A fork that adopts its own `README.md` while carrying an upstream
+repository whose root README is also called `README.md`. Here upstream's
+`README.md` was already this repository's `README.md`, byte for byte: 343 lines,
+`20572708ea26d19fd596f1c4a44097dbcb491cdf0517024d68bbb5d622d0ac93`, and it was
+where upstream states the licence grant (`README.md:35-38`), names the
+algorithm's origin (`:51-54`), points at the correctness proof (`:78-79`) and
+says not to cast before converting (`:16-17`).
+
+**Symptom.** Nothing fails loudly, which is the problem. This tree cited
+`README.md:NN` in eleven places across five files. After the fork's README
+lands, all eleven still resolve — to a file, at a line number, with entirely
+different words underneath. A licence citation that now points at fork prose
+while claiming to quote upstream's grant is worse than a broken one, because
+nothing reports it.
+
+**Fix.** Four moves, in this order, and the order matters:
+
+1. Preserve upstream's bytes under a distinct name before touching anything:
+   `README.upstream.md`, carrying upstream's exact digest, unedited. This is a
+   copy, not a rename, and the distinction is the point: upstream's README still
+   exists upstream under its own name, and only the local copy moved.
+2. Move the integrity record's line with the bytes: same digest, new path. A
+   record whose path names a file that no longer holds those bytes is a record
+   that measures nothing.
+3. **Rename every citation**, in every file, including build files, CI
+   configuration and C headers. `README.md:NN` becomes `README.upstream.md:NN`
+   with the line number unchanged. A citation is a promise about which bytes a
+   line number belongs to, and the promise does not care which role owns the
+   file making it. Eleven citations here spanned `UPSTREAM.md`, `NOTICE.md`,
+   `README.zig.md`, `translate.h`, `.github/workflows/verify.yml` and
+   `build.zig.zon` — four of them outside the role that did the relocation.
+4. Add the path to the diff's exception list by name. `README.md` is now a
+   *third* upstream-tracked path that differs from the pin, beside `ryu/ryu.h`
+   and `.gitignore`. A diff configured for two exceptions fails on the third,
+   which is the correct outcome — but it fails as a build break, not as a
+   provenance statement, so the statement has to be written down too.
+
+**Targets bound.** This is not about Markdown, ryu or any one repository. It
+binds wherever a fork writes over a path upstream also owns. Two consequences
+generalise past the README: any `.paths` or file-list manifest must gain the
+preserved copy, or a fetched package cannot resolve a citation its own documents
+make; and any "N upstream-tracked paths differ" sentence in a provenance
+document is a load-bearing count that a later reader uses to check a diff, so
+it moves with the paths and not with the prose around it.
+
+**Status.** `SOURCE-CONFIRMED` for the relocation and the eleven citation
+renames in this working copy, and one replay was observed: `sha256sum -c
+UPSTREAM.sha256` from the repository root gives **38 records, 38 `OK`, exit 0**,
+with `README.upstream.md` passing under its new path. That is the in-checkout
+half only; a checkout can hold a file the manifest does not list, so the
+fetched-copy half is unproven and is driver-owned. `PENDING-VERIFICATION`
+otherwise: the filtered fetch, the in-copy replay, the consumers, and the
+pinned-commit diff with three named exceptions. Four of the eleven citations sit
+in build-role and CI-role files this role does not own, and they are carried in
+this wave's hand-off rather than silently left wrong.
+
+---
+
+## 17. A corrected citation can still be a wrong one
+
+**Condition.** A provenance-bearing comment in one file cites a line range in a
+file another role is rewriting. The citing role asks the owner to fix the stale
+range; the owner looks up where the block moved, writes the new range, and
+stops. Here the cited text was the statement "no `RYU_DEBUG` is defined", whose
+anchor is `const c_flags` — and the owner wrote `build.zig:289-291`, which is the
+comment block *immediately preceding* that declaration, six lines short of it.
+
+**Symptom.** Nothing. The claim is still true, the file still compiles, the
+provenance record still validates, and every gate stays green. The citation
+simply names the wrong three lines, and a reader who follows it finds prose about
+shared-object visibility instead of the flag list that makes the claim.
+
+**Fix.** Verify a moved citation against the thing it asserts, not against the
+neighbourhood of where it used to be. "Where did the block move" is two
+questions: where did it move to, and does the new range *contain the cited
+construct*? The second is the one that gets skipped, because the first has an
+obvious answer from a search and the second needs reading the target lines. For
+this tree the anchor is `build.zig:295-297`; `289-291` is the preceding comment.
+
+The wider rule is about who checks. The pinned-digest owner is the only role that
+can tell that a citation inside a hashed file went stale or wrong, and that role
+owns no `build.zig`. So a provenance role finding a bad citation in someone
+else's file must report it with both line ranges — the one written and the one
+that actually contains the construct — rather than edit a file whose digest it
+would then have to move, and rather than let a true claim stand on a citation
+that points elsewhere.
+
+**Targets bound.** Bound to any tree where a comment cites a line range in a file
+that is rewritten separately, which is most SDK forks. It binds hardest when the
+cited file's digest is pinned: the wrong citation is then frozen into a record
+that will keep validating it.
+
+**Status.** `SOURCE-CONFIRMED` in this working copy: `build.zig:289-291` is
+comment prose and `build.zig:295-297` is `const c_flags`. Reported to the owning
+role with both ranges; `translate.h` is not this role's file and its digest is
+pinned, so the fix was not made here — moving a digest just derived in order to
+absorb a documentation defect would defeat the record. **Closed**: the owning
+role corrected line 69 to `build.zig:295-297`, Group F was re-derived once more,
+and `CHANGELOG.md` entry 32 carries the whole sequence including the first,
+wrong correction.
+
+---
+## 18. Four sentences outlived the source they described
+
+**Condition.** The contract-migration wave landed the runtime-loaded route, the
+generic-128 translation and the shared-object refusal while this fork's
+documentation was still being written against the tree as it stood before them.
+
+**Symptom.** `README.zig.md` — the document a Zig consumer opens first — said
+the runtime-loaded provider was "**not in this repository yet.** No table, no
+loader and no `runtime/` exists here"; that `wasm32-wasi` "takes a static
+archive under `-Dlinkage=dynamic`"; that "the Zig facade publishes **no**
+generic 128-bit symbol"; and, in its buffers section, that "there is no
+allocation anywhere in the facade". Its Commands table listed no runtime variant
+at all, so nothing in the same document compensated.
+
+**Cause.** Prose written against one tree and not revisited when the tree moved
+underneath it. Every one of the four was true when it was written, and none of
+them was a historical observation — which is exactly what made them dangerous,
+because a present tense is an instruction. Three would have cost a reader
+something real: the route table denies the headline option, so a consumer
+concludes the dispatch does not exist; a documented static substitution teaches
+expectation of the quiet failure this fork exists to avoid; and the allocation
+sentence invites `defer gpa.free(ryu.format64ShortestOwned(v).slice())`, which
+hands a libc pointer to a Zig allocator.
+
+**Fix.** All four rewritten from the shipped code, each with a citation a reader
+can check in one step: `build.zig:914-930` for the option, `runtime/graph.zig`
+for the wiring, `build.zig:844-853` for the refusal and its own sentence
+ending `No static substitution is made`, and `zig/root.zig:566-657` for the four
+`Owned` writers that call `f2s`, `d2s`, `d2fixed` and `d2exp`.
+`README.md` § 3b, `NOTICE.md`'s file table and `CHANGELOG.md` entry 33 carry the
+same corrections, and the same drift was corrected in the sibling SDKs of this
+wave in parallel.
+
+**What it is bound to.** A documentation claim is `SOURCE-CONFIRMED` at the
+moment it is written and stale the moment the source moves, so the three shapes
+that turn a stale document into a wrong instruction — "this does not exist",
+"nothing is allocated", "a different artifact is delivered instead" — are the
+ones worth re-reading against the source before they are left in place. Note 17
+is the same lesson about citations; this one is about claims.
+
+---
+## 19. A red gate whose cause was one unset environment variable
+
+**Condition.** The driver ran the runtime-loaded route with `RYU_PROVIDER`
+exported for `smoke`, and with nothing exported for `test`.
+
+**Symptom.** Eight `-Druntime=true` gates — four optimize modes, both linkages —
+all eight exit 1: `25/27 steps succeeded (1 failed); 0/37 tests passed (37
+crashed)`, with every test aborting at `tests.zig`'s `missingProvider` before
+its body ran.
+
+**Cause.** `tests.zig` names its provider through `RYU_TEST_PROVIDER`, which is
+a *second* variable from the one `smoke` reads, and a build cannot inject a
+path into a run step's environment — so the invocation has to export both and
+this one exported one. The suite deliberately does not skip when the variable is
+missing, and that is right: a suite that quietly stopped testing would report
+success for nothing, and a green row built on a skipped suite is the one thing
+this repository's rules forbid outright.
+
+**Fix.** None here, and that is the correct outcome: the gate was right and the
+invocation was incomplete. What was needed instead of a workaround was
+recorded — a replay exporting `RYU_PROVIDER` **and** `RYU_TEST_PROVIDER` for
+the whole `zig build`, naming the same shared object.
+
+**What it is bound to.** A red row in this ledger is a fact about an
+invocation, and reading one as a defect in the package is the more expensive
+mistake. Here the route demonstrably worked in all eight runs: the configure
+line named the runtime dispatch, `smoke` printed `loaded RYU_PROVIDER <path>` and
+then every checked answer through the generated table, and `install` completed.
+`README.md` § 3b now states that split rather than collapsing eight runs into
+"the loaded route is red", because the two halves are different claims about
+different code.
+
+---
+## 20. A task body that inherits the caller's directory builds the wrong tree
+
+**Condition.** devenv runs a `tasks` entry as a generated shell program in the
+working directory of the project the shell was entered from. The driver enters
+this SDK from a scratch project that holds no `build.zig` and no
+`cross-test.profile.sh`, so a body that relied on being "in the SDK" was
+relying on a fact nobody had stated.
+
+**Symptom.** All six bodies of this SDK's `devenv.nix` were single command lines
+— `zig build`, `zig build test`, `zig build smoke`, `zig build check`, `zig build
+install`, `cross-test` — and none of them carried a job count, a cache directory
+or an install prefix. A default `zig build` is this package's *install* step
+(`build.zig:942`, `:957-960`, `:967`), so the entry point called "build the C
+library" also wrote `zig-out/` and a `.zig-cache/` into the checkout, and the
+matrix entry ran with the harness's own defaults of two targets and one job per
+build.
+
+**Fix.** One `let` block and six rewritten bodies, all in `devenv.nix`. The
+`sdkRoot` binding, `builtins.toString ./.` rendered through
+`lib.escapeShellArg`, is the first line of every body, `|| exit 1` included, so
+a failed `cd` cannot be followed by a build in whatever directory the caller
+was standing in. All five `zig build` bodies carry this workspace's three
+flags — `-j8`, an explicit `--cache-dir "$ZIG_LOCAL_CACHE_DIR/ryu"`,
+`--summary all` (`AGENTS.md:157-159`); the two that install also pass
+`--prefix "$ZIG_LOCAL_CACHE_DIR/ryu-prefix"`, and the three that depend on no
+install step are given no prefix they do not need. `sdk:matrix` is
+`cross-test --jobs 8 --build-jobs 8`.
+
+**The cache fill had to move into the body, and that is the part worth
+remembering.** Putting it in `enterShell` alone looks equivalent and is not:
+`devenv tasks run --mode single` does not source the shell hook, so that task
+would run `zig build --cache-dir "$ZIG_LOCAL_CACHE_DIR/ryu"` with the variable
+unset and hand the compiler `--cache-dir "/ryu"` — a path this file does not get
+to invent, and strictly worse than the `.zig-cache` default it was there to
+replace. So each body now places the cache itself, before the compiler:
+caller-exported `ZIG_LOCAL_CACHE_DIR` / `ZIG_GLOBAL_CACHE_DIR` are kept exactly
+as they are, a missing one comes from `$XDG_CACHE_HOME` else `$TMPDIR`, only a
+directory chosen that way is created, and with none of the three the task names
+what is missing and exits non-zero. `enterShell` keeps the same fill for an
+interactive `zig build`, warning and continuing instead — refusing to open a
+shell is not that block's decision to make.
+
+**Why those two spellings and not the obvious ones.** `builtins.toString ./.`,
+never `"${./.}"`: interpolating a path asks Nix for a store copy of this whole
+tree, and the read-only copy is not the working tree the tasks build, install
+and matrix over. `--jobs` and `--build-jobs`, never a combined token: they are
+two separate options of the tool (`cross-test:139-140`, `:617-618`), and `-j`
+is not one of them — the harness manages `-j` itself and rejects it in
+`CROSS_BUILD_ARGS`, which is why `cross-test.profile.sh:39-40` lists it among
+the flags a profile must not carry.
+
+**Not claimed.** No devenv, zig, cross-test or Nix command was run over this
+change. The bodies above are read out of the file, and the next gate over this
+SDK is the first thing that will have seen them execute.
+
+---
+## 21. A skip the driver attributes is a boundary, not a coverage gap
+
+**Condition.** Row 51 put `-Dgeneric128=true` on for the first time across all
+sixteen configurations. Thirty-five of the suite's thirty-six tests run in
+every cell; one does not, and it is the only test in the suite whose oracle is
+upstream's `long double`.
+
+**Symptom, and it is a shape rather than a number.** Every one of the sixteen
+cells prints `35/36 tests passed (1 skipped)` with zero failures, and every one
+of them is recorded `status: skipped-tests` rather than `pass`, so the driver's
+own wrapper exits 1 sixteen times over. Sixteen green command exit codes and
+sixteen non-passes are one fact seen from two ends, and the second number does
+not cancel the first.
+
+**Cause.** `tests.zig:1172` guards on `ryu.generic128.LongDouble != f80`, and
+`LongDouble` is read out of the translated declaration, which on the pinned Zig
+spells that parameter `c_longdouble`. That is a distinct type from `f80` even
+where both are 80 bits wide, and Zig cannot write a value for it at all
+(`lib/std/zig/c_translation/helpers.zig:387`). So the guard fires on every
+target, x86_64 included, and the test declines to compare across an ABI it
+cannot see through. The receipt says it in fields rather than in prose:
+`bucket: abi_guard`, `abi_guard_sites: 1`, `other_sites: 0`,
+`feature_off_sites_could_fire: false`, `partial: true`.
+
+**Bound to.** Any test whose oracle is a C type the translator hands over
+opaquely. Note 11 is the same lesson from the other direction — there a
+hand-written layout claim was wrong and the library was right; here the library
+is untestable from Zig and says so. In both cases the honest move was to
+attribute the non-result rather than to widen the claim: deleting this guard
+would not make the test pass, it would not compile, and the x87 answer stays
+reachable from C and through `fromBinary` with upstream's own 64/15/explicit
+triple (`ryu/generic_128.c:80`).
+
+**Status.** `OBSERVED`, sixteen times, `partial: true` on every cell: epochs
+`20261005T014407332917Z-66097-ryu-native` and
+`20261005T015048544771Z-69523-ryu-loaded`. **Not a pass**, and not 36/36. The
+option still has no foreign-target compile, and row 51's provider is this
+tree's own `libryu.so` — the external-route wave of epoch `20261004T232439Z`
+recorded `external_successes_observed: 0` and
+`own_routes_counted_as_external: []`, so no independent external provider has
+ever been exercised for this SDK.
+
+---
 ## What is still open
 
 Recorded here and in `CHANGELOG.md` so that nothing is lost. Two items were
@@ -737,9 +1068,10 @@ Two ongoing scope notes and two driver-owned closure records:
    they must move together with any upstream re-sync.
 4. **`-Dgeneric128` has still never been compiled for a foreign target.** It is
    compiled, installed and exercised from a real C consumer on the native
-   target (receipts 14, 26, 27 and 28), and the default graph deliberately does
-   not depend on it, so none of the twelve green `check` rows covers it. If a
-   later wave wants that coverage it needs its own compile attempts per target —
+   target (receipts 14, 26, 27 and 28, and rows 50 and 51), and the default
+   graph deliberately does not depend on it, so none of the twelve green
+   `check` rows or row 49 covers it. If a later wave wants that coverage it needs
+   its own compile attempts per target —
    upstream tags the unit `nowindows` (`ryu/BUILD:38-49`) and gates its CMake
    target on `__uint128_t` (`CMakeLists.txt:31-52`), so at least one matrix
    target is expected to fail for it and that failure has to be recorded as a
@@ -757,3 +1089,32 @@ Two ongoing scope notes and two driver-owned closure records:
    compile-only baseline is closed by receipt 41, and the full 53-cell
    matrix by receipt 39: 20 Linux cells execute 28 tests each; 33 cells compile
    without an available runtime.
+
+7. **The build-graph delivery has now been executed on the current tree; the
+   Nix half has not.** `build.zig` declares `-Dlinkage=static|dynamic` with
+   `.static` the default (`build.zig:897-912`), writes `lib/pkgconfig/ryu.pc`
+   itself (`build.zig:668-704`, attached to the install step at `:957-959`) and
+   installs the carried licence records under `share/licenses/ryu/`
+   (`build.zig:702-704`); `build.zig.zon` `.paths` carries the relocated
+   README, the packaging files and the whole `runtime/` directory; `verify.yml`
+   names three differing upstream paths and checks `README.upstream.md` against
+   upstream's digest while asserting `README.md` is *not* that digest. Rows 44
+   and 45 built, ran and installed both variants in four optimize modes each.
+   Still unrun: any `nix` or `devenv` command, the six-target `check` after this
+   wave's changes, and the 53-cell matrix after it. `CHANGELOG.md` entries 28,
+   30, 31, 32, 33.
+8. **The Nix and devenv layer is the only part of this wave nothing has run.**
+   No `nix build`, no `nix develop`, no `devenv shell`. Everything else has now
+   been executed at least once on the current tree, by rows 44 and 45, and the
+   gates that are still pending are named row for row in `README.md` § 3b. The
+   historical rows in § 3a and in `README.zig.md` describe a tree that no longer
+   exists in that form. `CHANGELOG.md` entries 30, 33.
+9. **The runtime route's behavioural suite has now run, and it is a partial.**
+   `smoke` has in all eight loaded configurations, resolving the provider named
+   by `RYU_PROVIDER` and printing every answer through the generated table.
+   `test` ran in rows 47 and 51 once `RYU_TEST_PROVIDER` was exported beside it,
+   and completed instead of aborting on its precondition; note 19 is what that
+   precondition was, note 21 what the one remaining skip is. Open alongside it:
+   `check -Dgeneric128=true` for any target, any `wasm32-wasi` gate that would
+   exercise the shared-object refusal, any provider this tree did not build
+   (none exists on this host), and this repository's own `verify.yml`.

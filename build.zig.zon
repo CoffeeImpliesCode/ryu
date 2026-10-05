@@ -36,11 +36,22 @@
         // surface. They are the package's `test` and `smoke` steps, so a
         // package that cannot resolve them cannot be tested at all.
         "zig",
+        // The runtime-loading half: the API role's build-side graph and this
+        // SDK's descriptor, plus the reusable loader core the driver copies in
+        // (`runtime/loader.zig`, `runtime/generate.zig`, `runtime/sync.c`,
+        // `runtime/sync.h`). `build.zig` reaches it through one
+        // `@import("runtime/graph.zig")`, and a package that cannot resolve it
+        // cannot be configured at all — the import is unconditional so that a
+        // missing graph is a configure error rather than a runtime branch that
+        // silently did not exist.
+        "runtime",
         "tests.zig",
         "smoke.zig",
         // The external consumer package: it reaches this package by relative
         // path and by `dep.module("ryu")` alone.
-        "consumer",
+        "consumer/build.zig",
+        "consumer/build.zig.zon",
+        "consumer/src/main.zig",
         // Independent fixtures for the behavioural tests.
         "testdata",
         // Upstream's C core, its experimental parsers and its experimental
@@ -51,7 +62,9 @@
         // Upstream's Java implementation and its test tree, the C code
         // generators that produce the tables, and its Lean 4 port. None of it
         // is built by this fork; all of it is part of the pinned upstream
-        // tree, and the provenance gate compares the whole tree.
+        // tree, and the provenance gate compares the whole tree. The licences
+        // those third-party trees carry are installed by build.zig under
+        // share/licenses/ryu/third_party/, so `third_party` has to travel.
         "src",
         "third_party",
         "scripts",
@@ -72,21 +85,36 @@
         ".classpath",
         // Upstream's licence terms, verbatim and complete. Both apply: files
         // outside `third_party/` are Apache-2.0, and the files in `ryu/` may
-        // alternatively be used under Boost-1.0 (`README.md:35-38`).
+        // alternatively be used under Boost-1.0, at the copyright holder's
+        // choice (`README.upstream.md:35-38` — upstream's own README, kept
+        // byte for byte under that name because `README.md` is this fork's).
         "LICENSE-Apache2",
         "LICENSE-Boost",
-        "README.md",
         "CONTRIBUTORS",
-        // Upstream's CI configuration is kept as upstream wrote it and is not
-        // run by this fork; `.github/workflows/verify.yml` is this fork's own.
-        ".github",
-        ".gitignore",
-        // Fork provenance and divergence records.
+        // This fork's own records. `README.upstream.md` is upstream's README
+        // byte for byte (its digest is checked in `.github/workflows/
+        // verify.yml`); the rest describe what this fork did to the tree and
+        // why, and a private repository removes no obligation. Every one of
+        // them is also installed by `zig build`, because a source package and
+        // an install tree carry the same provenance.
+        "README.md",
+        "README.upstream.md",
+        "FORK-LICENSE.md",
         "UPSTREAM.md",
         "UPSTREAM.sha256",
         "NOTICE.md",
         "CHANGELOG.md",
         "FORK-NOTES.md",
         "README.zig.md",
+        // The standalone Nix/devenv layer, kept in `.paths` because the
+        // source-only derivation reads them and a package that cannot
+        // resolve them cannot be evaluated. They install nothing by hand:
+        // `package.nix` runs this package's own `build.zig` with `--prefix
+        // $out`, so the install paths are the build graph's to decide.
+        "package.nix",
+        "flake.nix",
+        "devenv.nix",
+        "devenv.yaml",
+        ".envrc",
     },
 }

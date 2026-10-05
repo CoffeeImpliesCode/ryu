@@ -12,7 +12,7 @@
 # How the original digests were produced, 2026-10-01: each file was read as raw bytes
 # and hashed with SHA-256 through Bun (`Bun.file(path).arrayBuffer()` and
 # `new Bun.CryptoHasher("sha256")`). No shell hashing or git command produced
-# those original lines. The 38 paths now total 2689946 bytes.
+# those original lines. The 38 paths now total 2690247 bytes.
 # The previous 2689837-byte total and all 38 digests were re-hashed on 2026-10-02 and
 # matched unchanged; the 2688626-byte figure this header carried until then was
 # stale.
@@ -20,13 +20,31 @@
 # only Group F's digest. The unchanged comparison above predates that edit.
 # The prominent change notice on the existing ryu/ryu.h:24 adds 59 bytes;
 # Group B's digest was re-derived with sha256sum on 2026-10-02. No line shifted.
+# 2026-10-04: Group F's `translate.h` digest is re-derived, 2689946 -> 2690247
+# bytes over the same 38 paths. The owning build role finished edits it had
+# begun earlier the same day; this record went red on `translate.h` while they
+# were in flight and was deliberately NOT refreshed over them. Every change is
+# comment-only and is attributed here rather than absorbed silently:
+#   1. an SPDX-License-Identifier header (Apache-2.0) naming this file
+#      fork-authored and covering nothing under `ryu/`;
+#   2. the licence citation `README.md:35-38` -> `README.upstream.md:35-38`,
+#      the rename recorded in CHANGELOG entry 28;
+#   3. a stale `build.zig` line citation corrected to `build.zig:295-297` after
+#      that role's rewrite. The first correction landed on `289-291`, which is
+#      the comment preceding `c_flags`; this role found that, the owning role
+#      fixed it, and the digest moved again. See CHANGELOG entry 32.
+# The include guard, the two `#include` lines and every byte a C consumer sees
+# are unchanged, and were unchanged before the first of these edits. No Group A,
+# B, C, D or E digest moved, and no native C source, header, test, fixture or
+# licence byte changed.
 #
 # What this record is: a hash of THIS WORKING TREE.
 # What it is not: a Git object id, a signature, or a re-derivation from the
 # pinned commit. That the working tree differs from commit
-# 4c0618b0e44f7ef027ebae05d2cc7812048f7c8f in exactly the two paths this file
-# names, `.gitignore` and `ryu/ryu.h`, is established elsewhere, by the
-# pinned-commit diff in `.github/workflows/verify.yml` and by the archive
+# 4c0618b0e44f7ef027ebae05d2cc7812048f7c8f in exactly the three paths named
+# elsewhere in this file, `.gitignore`, `ryu/ryu.h` and `README.md`, is
+# established elsewhere, by the pinned-commit diff in
+# `.github/workflows/verify.yml` and by the archive
 # receipt in `UPSTREAM.md`. The two are complementary: this record fails if
 # any hashed byte moves here, whatever a commit says; the diff fails if any
 # other upstream-tracked path differs from the commit, whatever this record
@@ -61,11 +79,22 @@
 # requires upstream's digest. A `git diff --exit-code` against the pinned
 # commit over `ryu/` reports this one path, by design.
 #
+# A third upstream-tracked path differs from the pinned commit, and it is
+# `README.md`. This fork replaced it with a README of its own and preserved
+# upstream's bytes, unedited, at `README.upstream.md`. Group D therefore
+# hashes `README.upstream.md`, with exactly the digest upstream's `README.md`
+# had here; the fork-authored `README.md` is deliberately NOT hashed, because
+# it is not upstream's bytes and is expected to change.
+#
 # Excluded, deliberately, with the reason in each case:
 #   * `.gitignore` - an upstream-tracked file this fork edits, additively, so
-#     its bytes are the fork's rather than upstream's. It is the only edited
-#     path left out of the records; the other edited path, `ryu/ryu.h`, is
-#     hashed at its patched digest, as the section above says.
+#     its bytes are the fork's rather than upstream's. It is not hashed.
+#   * `README.md` - an upstream-tracked file this fork replaced with its own
+#     README. Upstream's bytes are preserved, unedited, at
+#     `README.upstream.md` and hashed under that name in Group D, so the
+#     relocation is covered by this record; the fork-authored `README.md` is
+#     not hashed, because hashing fork prose here would measure nothing about
+#     the pin.
 #   * `third_party/` - separate upstream corpora (gtest, junit, mersenne,
 #     jaffer, double-conversion, mersenne_java) that carry their own licences
 #     and that nothing in this package compiles or links. See `NOTICE.md`.
@@ -77,8 +106,9 @@
 #     compiled by nothing here, and covered by the pinned-commit diff.
 #   * everything this fork wrote, except `translate.h`: `build.zig`,
 #     `build.zig.zon`, `zig/root.zig`, `tests.zig`, `smoke.zig`, `consumer/`,
-#     `.github/workflows/verify.yml` and the fork's own documentation. Those
-#     are expected to change.
+#     `.github/workflows/verify.yml`, `package.nix`, `flake.nix`, `devenv.nix`,
+#     `devenv.yaml`, `.envrc`, `FORK-LICENSE.md` and the fork's own
+#     documentation. Those are expected to change.
 #   * `zig-out/` and `.zig-cache/` - build output, absent from `.paths` and
 #     ignored by `.gitignore`.
 #   * this record itself.
@@ -130,13 +160,15 @@ ba239c732c8f6596770aa942f5bd17fab88d88060ad5379f5de04d8c63a84935  ryu/tests/s2d_
 176163ad587b643c224c79f82a0fbff3b5e0c82ad16352172cc83418bd5229ec  ryu/tests/s2f_test.cc
 
 # --- D. The licence terms, and the two files that state them ---------------
-# `README.md` is where upstream states the grant; `CONTRIBUTORS` is where it
-# names its authors. Hashing them keeps the basis of the licence itself
-# tamper-evident, not just the texts.
+# `README.upstream.md` is where upstream states the grant; `CONTRIBUTORS` is
+# where it names its authors. Hashing them keeps the basis of the licence
+# itself tamper-evident, not just the texts. Upstream's README reached this
+# repository as `README.md`; it now lives at `README.upstream.md`, byte for
+# byte, and the digest below is unchanged - only the path moved.
 5d1ce5f1f2515dc4587dfb681b0390bca432edd19b13fec47d8d1a59cc7e9bee  CONTRIBUTORS
 c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4  LICENSE-Apache2
 c9bff75738922193e67fa726fa225535870d2aa1059f91452c411736284ad566  LICENSE-Boost
-20572708ea26d19fd596f1c4a44097dbcb491cdf0517024d68bbb5d622d0ac93  README.md
+20572708ea26d19fd596f1c4a44097dbcb491cdf0517024d68bbb5d622d0ac93  README.upstream.md
 
 # --- E. This fork's fixtures ------------------------------------------------
 # Transcribed, not generated: every row is a literal upstream asserts. Their
@@ -152,4 +184,9 @@ cda439be4a3a1905cd95399ef82dcf5350ccca23599c80463dcee37d215b7cbc  testdata/s2f_p
 # --- F. Fork-authored header that is part of the shipped C surface ---------
 # Translated by `addTranslateC` for every target the package is built for,
 # and installed as `<prefix>/include/translate.h`.
-049973a764b4359234bb05087dbea5504deabdb10bd36f27b06f088da22c3ea3  translate.h
+# Digest re-derived 2026-10-04, twice, for comment-only changes by the owning
+# build role: SPDX header, the README.upstream.md citation rename, and a stale
+# build.zig line citation corrected to build.zig:295-297. Attribution and byte
+# total are in this file's header; CHANGELOG entry 32 carries the detail. The
+# include guard and the two `#include` lines are unchanged.
+087db8e782a395cf3c452bf6704ef55f9bfdfd8b98aa91aee64cb2f3a254db14  translate.h

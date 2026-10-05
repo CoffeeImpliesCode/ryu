@@ -27,12 +27,21 @@
 #     working `long double` (ryu/generic_128.h:42, ryu/generic_128.c:70-73)
 #     and upstream itself builds it as a separate target tagged `nowindows`
 #     (ryu/BUILD:38-49), so it is a separate gate on its own terms rather
-#     than something this one quietly narrows. The harness also manages
-#     -Dtarget, --prefix, --cache-dir, -j, --summary, --color and
+#     than something this one quietly narrows. `-Dlinkage` is not passed for
+#     the same reason and not the same shape: the matrix then builds the
+#     delivery this package has always shipped, the static archive, the one
+#     that has to compile on all 53 platforms. The shared variant is a gate of
+#     its own and a narrower one: carrying it at all needs a dynamic linker,
+#     and a target without one refuses the option outright rather than
+#     substituting an archive, so a matrix carrying both variants would fail
+#     its configure step on every platform whose OS has none. The harness also
+#     manages -Dtarget, --prefix, --cache-dir, -j, --summary, --color and
 #     --test-timeout itself and rejects them in CROSS_BUILD_ARGS, so the
-#     optimize mode is the build runner's default and the six-target
-#     compile-only `check` matrix is a separate command this profile does not
-#     touch.
+#     optimize mode is the build runner's default. `-Druntime` is not passed for
+#     the same reason and one more: a runtime-loaded build resolves its symbols
+#     through the platform loader at run time, and which platforms of this table
+#     have a loader a test binary can use is this profile's business, not the
+#     harness's.
 #   * ZIG, CROSS_PREFIX, CROSS_CACHE_DIR or any other path. A profile that
 #     names one host's compiler cache or output directory is not a package
 #     file; it silently stops working on every other machine.

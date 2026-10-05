@@ -1,11 +1,14 @@
-/* Aggregate header for translate-c.
+/* SPDX-License-Identifier: Apache-2.0
  *
- * This file is fork-authored and is the only new C file this package adds.
+ * Fork-authored; that identifier matches the primary upstream grant this
+ * fork's own files are under (FORK-LICENSE.md), and it covers nothing under
+ * `ryu/`, which is upstream's own dual Apache-2.0/BSL-1.0 material.
+ * This is the only new C file this package adds.
  * It contains no declarations of its own: it names the two public headers
  * upstream ships, in upstream's own spelling, so that `pub const c` in the
  * Zig facade is a translation of upstream's published API and nothing else.
  *
- * Why angle brackets and why two headers:
+ * Why angle brackets, and which headers:
  *
  *   Every source file and every internal header in `ryu/` spells its package
  *   includes as "ryu/<name>.h" (for example `ryu/d2s.c:30,43-45`), which
@@ -20,7 +23,8 @@
  *   scientific formatters for float and double. It is upstream's only header
  *   that upstream's own install rules publish (`CMakeLists.txt:28`), and it is
  *   dual licensed, Apache-2.0 or Boost-1.0, at the copyright holder's choice
- *   (`README.md:35-38`).
+ *   (`README.upstream.md:35-38` — upstream's README, kept byte for byte under
+ *   that name, since `README.md` is this fork's).
  *
  *   `ryu/ryu_parse.h` is the string-to-float side, and upstream marks it
  *   experimental in its own first comment: "At this time, it only support up
@@ -31,18 +35,37 @@
  *   parser. Those limits belong to the API documentation, not to a header this
  *   package rewrites.
  *
- * `ryu/ryu_generic_128.h` is deliberately absent, and `-Dgeneric128` does not
- * put it here. Upstream builds it as a separate target tagged `nowindows`
- * (`ryu/BUILD:38-49`) because it needs `__uint128_t` and a working
- * `long double`, and it is not part of the default conversion core. That
- * option compiles `ryu/generic_128.c` and installs its header for a C caller
- * that wants it; the Zig facade in `zig/root.zig` publishes no generic 128-bit
- * symbol, so no declaration here would be translated for it.
+ * `ryu/ryu_generic_128.h` is behind `RYU_TRANSLATE_GENERIC_128`, a macro this
+ * package defines on the translation line only when `-Dgeneric128` is set, and
+ * which a C consumer defines itself before including this header if it wants
+ * the same five converters. Upstream builds that unit as a separate target
+ * tagged `nowindows` (`ryu/BUILD:38-49`) because it needs `__uint128_t` and a
+ * working `long double`, and it is not part of the default conversion core, so
+ * a translation naming it unconditionally would describe five functions the
+ * default graph does not compile. With the macro undefined the header
+ * contributes nothing and the translation is exactly upstream's default
+ * sixteen entry points; with it defined the same translation also carries
+ * `struct floating_decimal_128`, `FD128_EXCEPTIONAL_EXPONENT` and the five
+ * converters of `ryu/ryu_generic_128.h:47-66`, which is the twenty-one a
+ * `-Dgeneric128` build dispatches.
  *
- * Both headers are guarded and both wrap their declarations in `extern "C"`,
- * so including them together is what upstream's own tests do
+ * The condition is the build option itself and nothing inferred from the
+ * compiler. `build.zig` compiles `ryu/generic_128.c` under exactly the same
+ * option, so the declarations and the object behind them agree by
+ * construction; whether the compiler being used accepts `__uint128_t` is its
+ * own answer for that target, and nothing here guesses at it or papers over
+ * it.
+ *
+ * The macro name is fork-owned and deliberately carries no `RYU_` prefix.
+ * Upstream defines no such macro, so a name that looked like upstream's would
+ * be an invented ABI knob that a later upstream release could collide with.
+ *
+ * All three headers are guarded and all three wrap their declarations in
+ * `extern "C"`, so including them together is what upstream's own tests do
  * (`ryu/tests/d2s_test.cc:20` includes ryu.h, `ryu/tests/s2d_test.cc:20`
- * includes ryu_parse.h) and the combination is well defined.
+ * includes ryu_parse.h) and the combination is well defined. The third is
+ * conditional and carries its own guard as well, so including it twice - once
+ * through this header and once directly - is still well defined.
  *
  * ## The one upstream line this package changes
  *
@@ -62,13 +85,16 @@
  * ordinary tokens - "unknown type name 'pragma'" at `inttypes.h:93` - on all
  * nine NetBSD cells. No compiled unit here depended on that header anyway:
  * each of the five includes `<stdint.h>` itself, and no `RYU_DEBUG` is
- * defined (`build.zig:118-120`), so their own `<inttypes.h>` blocks are out.
+ * defined (`build.zig:295-297`), so their own `<inttypes.h>` blocks are out.
  */
+ #ifndef RYU_TRANSLATE_H
+ #define RYU_TRANSLATE_H
 
-#ifndef RYU_TRANSLATE_H
-#define RYU_TRANSLATE_H
+ #include <ryu/ryu.h>
+ #include <ryu/ryu_parse.h>
 
-#include <ryu/ryu.h>
-#include <ryu/ryu_parse.h>
+ #ifdef RYU_TRANSLATE_GENERIC_128
+ #include <ryu/ryu_generic_128.h>
+ #endif
 
-#endif /* RYU_TRANSLATE_H */
+ #endif /* RYU_TRANSLATE_H */
