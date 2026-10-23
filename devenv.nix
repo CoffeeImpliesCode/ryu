@@ -5,7 +5,7 @@ let
   mkRyu = linkage:
     pkgs.callPackage ./package.nix {
       inherit linkage;
-      zig = pkgs.zig_0_16;
+      zig = pkgs.zig_0_17;
     };
 
   # Read the package version without realizing its derivation.
@@ -49,7 +49,7 @@ in
 {
   # Tools only; entering the shell must not build the SDK.
   packages = [
-    pkgs.zig_0_16
+    pkgs.zig_0_17
     pkgs.pkg-config
     pkgs.gnumake
     pkgs.git

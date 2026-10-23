@@ -1,5 +1,6 @@
 # Changelog
 
+- Port to Zig 0.17.0.
 - Added runtime-dispatch builds with `-Druntime=true` and explicit provider loading through `ryu.load`.
 - Exposed the optional generic 128-bit converters to C and Zig with `-Dgeneric128`.
 - Added `-Dlinkage=static|dynamic`; static is the default, and unsupported dynamic targets are refused.

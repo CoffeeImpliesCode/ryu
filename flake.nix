@@ -2,7 +2,7 @@
 {
   description = "Ryu: shortest, fixed and scientific IEEE-754 to decimal conversion, as a Zig-buildable SDK";
 
-  inputs.nixpkgs.url = "github:NixOS/nixpkgs/c7def046b9a883d46974757852106483d741586f";
+  inputs.nixpkgs.url = "github:NixOS/nixpkgs/02c087f3fe673c9e317f206a627cb6b910336dbe";
 
   outputs = { self, nixpkgs }:
     let
@@ -21,13 +21,13 @@
       packages = forAllSystems (pkgs:
         # Build natively; build.zig receives no cross-target override.
         assert pkgs.stdenv.hostPlatform.system == pkgs.stdenv.buildPlatform.system;
-        # Keep the selected compiler at Zig 0.16.0.
-        assert pkgs.zig_0_16.version == "0.16.0";
+        # Keep the selected compiler at Zig 0.17.0.
+        assert pkgs.zig_0_17.version == "0.17.0";
         let
           mkRyu = linkage:
             pkgs.callPackage ./package.nix {
               inherit linkage;
-              zig = pkgs.zig_0_16;
+              zig = pkgs.zig_0_17;
             };
         in
         {
@@ -37,12 +37,12 @@
         });
 
       devShells = forAllSystems (pkgs:
-        assert pkgs.zig_0_16.version == "0.16.0";
+        assert pkgs.zig_0_17.version == "0.17.0";
         {
           default = pkgs.mkShell {
             name = "ryu-sdk";
 
-            packages = with pkgs; [ zig_0_16 pkg-config gnumake git ];
+            packages = with pkgs; [ zig_0_17 pkg-config gnumake git ];
 
             shellHook = ''
               echo "ryu SDK development shell"

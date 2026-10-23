@@ -78,7 +78,7 @@ const Options = struct {
 fn addGraph(
     b: *std.Build,
     target: std.Build.ResolvedTarget,
-    optimize: std.builtin.OptimizeMode,
+    optimize: std.lang.Optimize,
     requested_linkage: std.builtin.LinkMode,
     public: bool,
     options: Options,
@@ -194,7 +194,7 @@ fn installLicenceRecords(b: *std.Build) void {
 fn addZigPrograms(
     b: *std.Build,
     target: std.Build.ResolvedTarget,
-    optimize: std.builtin.OptimizeMode,
+    optimize: std.lang.Optimize,
     graph: Graph,
 ) Programs {
     const test_mod = b.createModule(.{
@@ -227,7 +227,7 @@ fn addTargetCheck(
     b: *std.Build,
     step: *std.Build.Step,
     query: std.Target.Query,
-    optimize: std.builtin.OptimizeMode,
+    optimize: std.lang.Optimize,
     linkage: std.builtin.LinkMode,
     options: Options,
 ) void {
