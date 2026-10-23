@@ -1,12 +1,3 @@
-# Nix packages for the ryu SDK. package.nix is the derivation; this file names
-# the variants, pins one nixpkgs revision and offers a tools-only shell.
-#
-# default is static: this SDK's existing policy, and upstream's CMake default.
-# -Dgeneric128 is a build-graph option, not a packaging variant, so it has no
-# flake attribute; pass it through `zig build -Dgeneric128=true`.
-#
-# No flake.lock: the lock is the workspace driver's. Without one a git flake has
-# nothing to fetch, so use path:. until the tree is committed.
 
 {
   description = "Ryu: shortest, fixed and scientific IEEE-754 to decimal conversion, as a Zig-buildable SDK";
@@ -28,14 +19,9 @@
     in
     {
       packages = forAllSystems (pkgs:
-        # Nix cross-compilation is not supported: `zig build` runs without
-        # -Dtarget, so a cross derivation would install the build machine's
-        # native library under the host's name. Remote native builders stay
-        # valid, which is why this compares the two platforms rather than
-        # naming a system.
+        # Build natively; build.zig receives no cross-target override.
         assert pkgs.stdenv.hostPlatform.system == pkgs.stdenv.buildPlatform.system;
-        # Guards the compiler this SDK is pinned to; `zig_0_16` could be
-        # repointed by a future nixpkgs without the attribute name changing.
+        # Keep the selected compiler at Zig 0.16.0.
         assert pkgs.zig_0_16.version == "0.16.0";
         let
           mkRyu = linkage:
@@ -50,7 +36,6 @@
           default = mkRyu "static";
         });
 
-      # Tools only: entering a shell must not build the SDK.
       devShells = forAllSystems (pkgs:
         assert pkgs.zig_0_16.version == "0.16.0";
         {

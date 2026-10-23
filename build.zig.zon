@@ -1,70 +1,25 @@
 .{
-    // This is the default name used by packages depending on this one.
     .name = .ryu,
-    // Upstream's version line is `project(ryu VERSION 2.0)` (`CMakeLists.txt:2`).
-    // This fork pins a master commit of ulfjack/ryu,
-    // 4c0618b0e44f7ef027ebae05d2cc7812048f7c8f, rather than the v2.0 release
-    // tag, so this string has to carry that commit: a SemVer build-metadata
-    // suffix cannot hold one, and a bare `2.0.0` would claim a release this
-    // tree is not. The commit prefix therefore rides in the pre-release field.
     .version = "2.0.0-dev.4c0618b",
     .minimum_zig_version = "0.16.0",
-    // Identifies this package unambiguously. The id was generated for this
-    // fork by the pinned compiler rather than inherited from an upstream Zig
-    // package, because upstream ships no Zig package. It belongs to this
-    // manifest alone and must not be copied from another package.
     .fingerprint = 0x76a6222010d84c47, // Changing this has security and trust implications.
 
-    // Upstream's canonical repository is a Git clone with history, and every
-    // C source this package compiles comes from that clone. There is no
-    // network dependency to declare.
     .dependencies = .{},
 
     .paths = .{
-        // This package's own build graph and the aggregate header it
-        // translates.
         "build.zig",
         "build.zig.zon",
-        // The cross-test harness profile for this package: settings only, and
-        // discovered by name from the package root. It declares the standard
-        // `zig build test` step over the full published platform matrix, with
-        // no target subset, no `-Dgeneric128` and no host path. Nothing in
-        // build.zig reads it.
         "cross-test.profile.sh",
         "translate.h",
-        // The Zig facade, and the two root files that call its whole public
-        // surface. They are the package's `test` and `smoke` steps, so a
-        // package that cannot resolve them cannot be tested at all.
         "zig",
-        // The runtime-loading half: the API role's build-side graph and this
-        // SDK's descriptor, plus the reusable loader core the driver copies in
-        // (`runtime/loader.zig`, `runtime/generate.zig`, `runtime/sync.c`,
-        // `runtime/sync.h`). `build.zig` reaches it through one
-        // `@import("runtime/graph.zig")`, and a package that cannot resolve it
-        // cannot be configured at all — the import is unconditional so that a
-        // missing graph is a configure error rather than a runtime branch that
-        // silently did not exist.
         "runtime",
         "tests.zig",
         "smoke.zig",
-        // The external consumer package: it reaches this package by relative
-        // path and by `dep.module("ryu")` alone.
         "consumer/build.zig",
         "consumer/build.zig.zon",
         "consumer/src/main.zig",
-        // Independent fixtures for the behavioural tests.
         "testdata",
-        // Upstream's C core, its experimental parsers and its experimental
-        // generic 128-bit converter, plus its own tests, benchmark, Makefile
-        // and Bazel files. Untouched and kept in full, including the
-        // checked-in power-of-five tables the build never regenerates.
         "ryu",
-        // Upstream's Java implementation and its test tree, the C code
-        // generators that produce the tables, and its Lean 4 port. None of it
-        // is built by this fork; all of it is part of the pinned upstream
-        // tree, and the provenance gate compares the whole tree. The licences
-        // those third-party trees carry are installed by build.zig under
-        // share/licenses/ryu/third_party/, so `third_party` has to travel.
         "src",
         "third_party",
         "scripts",
@@ -72,10 +27,6 @@
         "lean-toolchain",
         "lakefile.toml",
         "lake-manifest.json",
-        // Upstream's other build entry points. They are kept, not retargeted:
-        // nothing in this fork runs CMake, Bazel or Lake, and their presence
-        // costs nothing while their absence would make the tree differ from
-        // the pinned commit.
         "CMakeLists.txt",
         "MODULE.bazel",
         "run_benchmark_linux.sh",
@@ -83,20 +34,9 @@
         ".bazelrc",
         ".bazelversion",
         ".classpath",
-        // Upstream's licence terms, verbatim and complete. Both apply: files
-        // outside `third_party/` are Apache-2.0, and the files in `ryu/` may
-        // alternatively be used under Boost-1.0, at the copyright holder's
-        // choice (`README.upstream.md:35-38` — upstream's own README, kept
-        // byte for byte under that name because `README.md` is this fork's).
         "LICENSE-Apache2",
         "LICENSE-Boost",
         "CONTRIBUTORS",
-        // This fork's own records. `README.upstream.md` is upstream's README
-        // byte for byte (its digest is checked in `.github/workflows/
-        // verify.yml`); the rest describe what this fork did to the tree and
-        // why, and a private repository removes no obligation. Every one of
-        // them is also installed by `zig build`, because a source package and
-        // an install tree carry the same provenance.
         "README.md",
         "README.upstream.md",
         "FORK-LICENSE.md",
@@ -106,11 +46,6 @@
         "CHANGELOG.md",
         "FORK-NOTES.md",
         "README.zig.md",
-        // The standalone Nix/devenv layer, kept in `.paths` because the
-        // source-only derivation reads them and a package that cannot
-        // resolve them cannot be evaluated. They install nothing by hand:
-        // `package.nix` runs this package's own `build.zig` with `--prefix
-        // $out`, so the install paths are the build graph's to decide.
         "package.nix",
         "flake.nix",
         "devenv.nix",
