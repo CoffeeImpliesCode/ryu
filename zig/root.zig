@@ -254,7 +254,7 @@ const Generic128 = struct {
 
     /// Target's translated C `long double` type.
     /// Upstream warns conversion support may depend on the compiler and platform.
-    pub const LongDouble = @typeInfo(@TypeOf(c.long_double_to_fd128)).@"fn".params[0].type.?;
+    pub const LongDouble = @typeInfo(@TypeOf(c.long_double_to_fd128)).@"fn".param_types[0].?;
 
     /// Sentinel exponent used by upstream to encode infinity or NaN.
     pub const exceptional_exponent: i32 = @intCast(c.FD128_EXCEPTIONAL_EXPONENT);

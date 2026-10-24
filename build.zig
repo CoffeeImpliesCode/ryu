@@ -222,7 +222,7 @@ fn addZigPrograms(
 }
 
 /// Compiles the library, tests and smoke example for one matrix target.
-/// A refused dynamic target stays a failing row; no substitute artifact is built.
+/// Excludes matrix targets outside the selected options' platform boundaries.
 fn addTargetCheck(
     b: *std.Build,
     step: *std.Build.Step,
@@ -233,19 +233,13 @@ fn addTargetCheck(
 ) void {
     const cross_target = b.resolveTargetQuery(query);
 
-    if (linkage == .dynamic) {
-        if (sharedObjectRefusal(b, cross_target)) |reason| {
-            const label = b.fmt("{s}-{s}", .{
-                @tagName(cross_target.result.cpu.arch),
-                @tagName(cross_target.result.os.tag),
-            });
-            step.dependOn(&b.addFail(b.fmt(
-                "ryu: check row {s}: {s} No artifact was built for this row, and nothing was substituted for it.",
-                .{ label, reason },
-            )).step);
-            return;
-        }
-    }
+    if (linkage == .dynamic and !targetCarriesSharedObject(cross_target)) return;
+    if (options.runtime_loaded) switch (cross_target.result.os.tag) {
+        .wasi, .emscripten, .freestanding => return,
+        else => {},
+    };
+    // Upstream marks generic_128 as nowindows in ryu/BUILD.
+    if (options.generic_128 and cross_target.result.os.tag == .windows) return;
 
     const cross = addGraph(b, cross_target, optimize, linkage, false, options);
     const programs = addZigPrograms(b, cross_target, optimize, cross);
@@ -300,8 +294,8 @@ pub fn build(b: *std.Build) void {
             "public header. A target whose platform cannot carry a shared object " ++
             "(wasm32-wasi in this package's own matrix; a Windows target can, and " ++
             "does) refuses -Dlinkage=dynamic: for the selected target the build " ++
-            "stops at configure time naming it, and inside `check` that one row " ++
-            "becomes an explicit failing step. Nothing is ever substituted.",
+            "stops at configure time naming it; `check` excludes unsupported " ++
+            "matrix targets. Nothing is ever substituted.",
     ) orelse .static;
 
     const runtime_loaded = b.option(
@@ -320,7 +314,7 @@ pub fn build(b: *std.Build) void {
         .generic_128 = b.option(
             bool,
             "generic128",
-            "Also build upstream's experimental generic 128-bit shortest converter (ryu/generic_128.c), install ryu/ryu_generic_128.h and translate it, so the facade's `generic128` namespace and the runtime dispatch carry its five converters and FD128_EXCEPTIONAL_EXPONENT as well as the default sixteen. Upstream tags it 'nowindows'; it is off by default and the cross-target check never builds it. Independent of -Dlinkage: it joins whichever artifact that option selected.",
+            "Also build upstream's experimental generic 128-bit shortest converter (ryu/generic_128.c), install ryu/ryu_generic_128.h and translate it, so the facade's `generic128` namespace and the runtime dispatch carry its five converters and FD128_EXCEPTIONAL_EXPONENT as well as the default sixteen. Upstream tags it 'nowindows'; it is off by default and the cross-target check excludes Windows when enabled. Independent of -Dlinkage: it joins whichever artifact that option selected.",
         ) orelse false,
         .runtime_loaded = runtime_loaded,
     };
@@ -343,10 +337,10 @@ pub fn build(b: *std.Build) void {
 
     b.step("test", "Run the behavioural tests").dependOn(&b.addRunArtifact(programs.tests).step);
 
-    // Compile the native graph and every matrix target without running them.
+    // Compile the native graph and compatible matrix targets without running them.
     const check_step = b.step(
         "check",
-        "Compile the C core, the translated interface, the tests and the smoke example for the six-target matrix without running anything",
+        "Compile the C core, translated interface, tests and smoke example for matrix targets compatible with the selected options",
     );
     if (target.query.isNative()) {
         check_step.dependOn(&published.c_lib.step);

@@ -23,10 +23,12 @@ No upstream C implementation, declaration, or algorithm is changed.
 
 | Gate | Targets | Coverage |
 |---|---|---|
-| `check` | `x86_64-linux-gnu`, `aarch64-linux-gnu`, `aarch64-macos-none`, `x86_64-windows-gnu`, `riscv64-linux-gnu`, `wasm32-wasi` | Compile-only. |
+| `check` | `x86_64-linux-gnu`, `aarch64-linux-gnu`, `aarch64-macos-none`, `x86_64-windows-gnu`, `riscv64-linux-gnu`, `wasm32-wasi` | Compile-only; filtered by the selected options below. |
 | `cross-test` | Zig 0.17.0's published target table | Runs tests where a runner is available; other targets are build-only. |
 
 `wasm32-wasi` has no dynamic linker, so `-Dlinkage=dynamic` is refused there rather than replaced by a static archive. Upstream marks the optional generic-128 unit `nowindows`; it requires compiler support for `__uint128_t`, and its `long double` converter is ABI-dependent.
+
+With `-Dlinkage=dynamic` or `-Druntime=true`, `check` excludes `wasm32-wasi`. Runtime loading is unavailable on WASI, Emscripten, and freestanding targets. With `-Dgeneric128=true`, `check` excludes Windows and compiles the optional converters on the remaining targets.
 
 ## Consumption
 

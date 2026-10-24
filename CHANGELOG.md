@@ -1,5 +1,6 @@
 # Changelog
 
+- Fix generic-128 `LongDouble` reflection on Zig 0.17.0 and filter cross-target checks by linkage, runtime loading, and generic-128 support.
 - Port to Zig 0.17.0.
 - Added runtime-dispatch builds with `-Druntime=true` and explicit provider loading through `ryu.load`.
 - Exposed the optional generic 128-bit converters to C and Zig with `-Dgeneric128`.
