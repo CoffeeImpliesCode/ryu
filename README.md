@@ -32,12 +32,10 @@ With `-Dlinkage=dynamic` or `-Druntime=true`, `check` excludes `wasm32-wasi`. Ru
 
 ## Consumption
 
-In `build.zig.zon` (local checkout example):
+In `build.zig.zon`:
 
-```zig
-.dependencies = .{
-    .ryu = .{ .path = "../ryu" },
-},
+```sh
+zig fetch --save git+https://github.com/CoffeeImpliesCode/ryu#v2.0.0-dev.4c0618b
 ```
 
 In `build.zig`:
